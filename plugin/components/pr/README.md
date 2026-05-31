@@ -2,46 +2,46 @@
 
 ## What it shows
 
-當前 branch 對應的 PR：`PR#<number>` 後面接一個依 review state 上色的 icon。沒有 PR 時整段隱藏。
+The PR for the current branch: `PR#<number>` followed by an icon colored by review state. The whole segment is hidden when there is no PR.
 
-review state → icon / 顏色對照：
+review state → icon / color mapping:
 
-| state | icon | 顏色 |
-|-------|------|------|
+| state | icon | color |
+|-------|------|-------|
 | `approved` | `✓` | `BOLD_GREEN` |
 | `changes_requested` | `✗` | `BOLD_RED` |
 | `pending` | `·` | `YELLOW` |
 | `draft` | `◌` | `DIM` |
-| 其他 / 未知 | （無 icon） | — |
+| other / unknown | (no icon) | — |
 
-無 icon 時只印 `PR#<number>`。
+When there is no icon, only `PR#<number>` is printed.
 
 ## Data sources
 
-純讀 projected-stdin env，零 fork：
+Pure read of the projected-stdin env, zero forks:
 
 - `CC_PR_NUM` ← stdin `pr.number`
 - `CC_PR_STATE` ← stdin `pr.review_state`
 
-PR 偵測本身由 host 在投影 stdin 前完成；本 component 不自己跑 `gh`。
+PR detection itself is done by the host before projecting stdin; this component does not run `gh` on its own.
 
 ## Config
 
-無。
+None.
 
 ## Requires
 
-無外部 binary / network。
+No external binary / network.
 
 ## Safety notes
 
-- 空字串即「無 PR」（新 contract 已移除舊 monolith 的 `"-"` sentinel），故僅以 `[ -n "$CC_PR_NUM" ]` 把關。
-- 透過 `printf -v REPLY` 回傳，KEY/VAL/RESET 內的字面 `\033` 在此被解讀成真正的 ESC。不 echo 到 stdout。
+- An empty string means "no PR" (the new contract drops the old monolith's `"-"` sentinel), so the only guard is `[ -n "$CC_PR_NUM" ]`.
+- Output is returned via `printf -v REPLY`, where the literal `\033` inside KEY/VAL/RESET is interpreted as a real ESC. Nothing is echoed to stdout.
 
 ## Example output
 
 ```
 PR#161 ✓        # approved
 PR#161 ·        # pending
-PR#161          # 未知 state，無 icon
+PR#161          # unknown state, no icon
 ```

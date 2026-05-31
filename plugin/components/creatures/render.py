@@ -54,18 +54,9 @@ def prune_sessions():
 
 RENDER_ROWS = 10              # fixed canvas height in cells (matches the sprite converter's cap)
 GRASS_PX = 4                  # height of the grass strip the creatures stand on
-# Ground palettes (TIP, MID, DARK) cycled by local time — 8 per day, one each 3h:
-# snow → frost → spring → lush → summer → autumn-gold → withered → night → (snow)
-GROUND_PALETTES = [
-    ((236, 244, 252), (206, 220, 236), (150, 172, 198)),  # 0  00-03 雪地
-    ((196, 222, 224), (150, 190, 196), (96, 136, 150)),    # 1  03-06 霜
-    ((150, 214, 120), (96, 184, 96), (56, 134, 66)),       # 2  06-09 嫩綠
-    ((122, 198, 98), (74, 156, 70), (46, 110, 54)),        # 3  09-12 翠綠
-    ((104, 182, 80), (64, 140, 62), (40, 100, 48)),        # 4  12-15 深綠
-    ((216, 196, 96), (184, 154, 68), (132, 104, 44)),      # 5  15-18 金黃枯黃
-    ((196, 142, 72), (158, 104, 52), (112, 72, 36)),       # 6  18-21 橙褐
-    ((70, 120, 82), (44, 92, 62), (26, 58, 42)),           # 7  21-24 暗夜
-]
+# A single calm green grass band (TIP highlight, MID blade body, DARK soil line).
+# No time-of-day cycling and no gaps — the creatures always stand on solid green.
+GRASS_PALETTE = ((122, 198, 98), (74, 156, 70), (46, 110, 54))
 TTL_MIN, TTL_MAX = 35, 130
 SPAWN_PROB = 0.18
 MOVE_PROB = 0.7
@@ -75,7 +66,6 @@ SOLID_THRESH = 36
 SHINY_PROB = 0.03             # chance a freshly spawned (non-resident) creature is shiny
 MORPH_PROB = 0.0              # disabled — resident Ditto keeps its own sprite (no mimicry)
 UNMORPH_PROB = 0.03           # (unused while MORPH_PROB = 0) chance/tick it reverts to itself
-METEOR_PROB = 0.02            # chance/tick a shooting star appears (when none is active)
 
 
 def load_json(path: Path, default):
@@ -194,74 +184,29 @@ def tick(state, world, cols, rng, resident=None):
                 c["x"] = nx
 
     state["creatures"] = [c for c in creatures if c.get("resident") or c["age"] < c["ttl"]]
-
-    # shooting star — its own slot, streaks top-right → bottom-left across the sky
-    W = cols * world.sx
-    m = state.get("meteor")
-    if m:
-        m["x"] += m["vx"]; m["y"] += m["vy"]; m["life"] -= 1
-        if m["life"] <= 0 or m["x"] < -4 or m["y"] >= RENDER_ROWS * world.sy:
-            state["meteor"] = None
-    elif rng.random() < METEOR_PROB and W > 12:
-        state["meteor"] = {"x": rng.randint(W // 2, W - 4), "y": rng.randint(0, 2),
-                           "vx": -rng.choice((2, 3)), "vy": 1, "life": rng.randint(7, 13)}
     return state
 
 
-def _stable_seed(s):
-    """Deterministic per-session seed (FNV-1a) so a session's grass is stable but unique."""
-    h = 2166136261
-    for ch in (s or "x"):
-        h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
-    return h
-
-
-def _ground_palette():
-    return GROUND_PALETTES[time.localtime().tm_hour // 3]
-
-
-def _paint_grass(canvas, H, W, pal, gseed):
-    """A tidy grass strip the creatures stand on: ragged tip row, denser blades, solid soil.
-    The tip pattern is seeded per session, so each session's grass differs."""
-    TIP, MID, DARK = pal
+def _paint_grass(canvas, H, W):
+    """A solid green grass band the creatures stand on — uniform, no gaps: a
+    lighter blade-tip highlight on top, a mid-green body, and a darker soil line
+    at the bottom. Every cell is painted so the status bar never shows through."""
+    TIP, MID, DARK = GRASS_PALETTE
     top = H - GRASS_PX
     for x in range(W):
-        hs = ((x * 2654435761) ^ gseed) & 0xFFFFFFFF
         for r in range(GRASS_PX):
             y = top + r
-            if r == 0:                                # ragged blade tips — gaps show the bar
-                if hs % 5 < 3:
-                    canvas[y][x] = TIP if (hs >> 3) & 1 else MID
-            elif r == 1:                              # denser blades
-                if hs % 7:
-                    canvas[y][x] = MID if (hs >> 5) & 3 else TIP
-            elif r == GRASS_PX - 1:                   # solid soil line
-                canvas[y][x] = DARK
-            else:
-                canvas[y][x] = MID if (hs >> r) & 1 else DARK
+            canvas[y][x] = TIP if r == 0 else DARK if r == GRASS_PX - 1 else MID
 
 
-def _draw_meteor(canvas, H, W, m):
-    """A shooting star: bright head + a short fading trail behind it (in the sky)."""
-    if not m:
-        return
-    HEAD, TRAIL = (240, 245, 255), (150, 170, 220)
-    for i in range(4):
-        x, y = m["x"] - m["vx"] * i, m["y"] - m["vy"] * i   # trail = opposite the motion
-        if 0 <= y < H and 0 <= x < W:
-            canvas[y][x] = HEAD if i == 0 else TRAIL
-
-
-def build_canvas(state, world, cols, ground=None, gseed=0):
+def build_canvas(state, world, cols, ground=None):
     """Composite live creatures onto a sub-pixel canvas (sx×sy per cell, bottom-aligned)."""
     sx, sy = world.sx, world.sy
     H, W = RENDER_ROWS * sy, cols * sx
     canvas = [[None] * W for _ in range(H)]
     grass = ground == "grass"
-    pal = _ground_palette() if grass else None
     floor = H - GRASS_PX if grass else H     # creatures stand on top of the grass strip
     tick = state.get("tick", 0)
-    _draw_meteor(canvas, H, W, state.get("meteor"))   # sky, behind the creatures
     for c in sorted(state.get("creatures", []), key=lambda c: c["x"]):
         sp = world.sprite(_eff(c))
         if not sp:
@@ -292,7 +237,7 @@ def build_canvas(state, world, cols, ground=None, gseed=0):
         if shiny and (tick + c["x"]) % 4 < 2:        # twinkle a sparkle by the head
             canvas[max(0, y0 - 1)][min(W - 1, x0 + w)] = (255, 250, 210)
     if grass:
-        _paint_grass(canvas, H, W, pal, gseed)   # tidy strip below; creatures stand on it
+        _paint_grass(canvas, H, W)   # solid green band below; creatures stand on it
     return canvas
 
 
@@ -332,11 +277,11 @@ def fold_cell(sub):
     return pat, _avg(ga), (_avg(gb) if gb else None)
 
 
-def render(state, world, cols, ground=None, gseed=0):
+def render(state, world, cols, ground=None):
     if not world.species or not world.octant:
         return ""
     sx, sy = world.sx, world.sy
-    canvas = build_canvas(state, world, cols, ground, gseed)
+    canvas = build_canvas(state, world, cols, ground)
     R = len(canvas) // sy
     out = []
     for cr in range(R):
@@ -393,14 +338,13 @@ def main() -> int:
     if rng.random() < 0.01:                       # occasional cleanup of idle sessions
         prune_sessions()
 
-    gseed = _stable_seed(session)
     state = tick(state, world, max(1, cols), rng, resident)
     try:
         state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
 
-    sys.stdout.write(render(state, world, max(1, cols), ground, gseed))
+    sys.stdout.write(render(state, world, max(1, cols), ground))
     return 0
 
 

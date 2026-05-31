@@ -5,6 +5,7 @@ import { FileJson, FileText, Terminal, GitPullRequest } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getContract } from "@/lib/registry";
+import { getDict, getLocale } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Writing a component · claude-statusline",
@@ -162,31 +163,28 @@ const markdownComponents: Components = {
   ),
 };
 
-export default function SpecPage() {
+export default async function SpecPage() {
   const contract = readContract();
+  const locale = await getLocale();
+  const t = getDict(locale);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+    <main className="w-full py-12 sm:py-16">
       <header className="mb-10">
         <Badge variant="outline" className="mb-3 font-mono">
-          authoring spec
+          {t.spec.badge}
         </Badge>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          Writing a component
+          {t.spec.title}
         </h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">
-          A component is a self-contained directory that renders one piece of
-          the status line. It ships everything the runtime needs: a manifest, a
-          README written for Claude to read and vet, and one or more executable
-          render entries.
-        </p>
+        <p className="mt-3 max-w-2xl text-muted-foreground">{t.spec.intro}</p>
       </header>
 
       {/* Directory shape */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight">
           <FileJson className="size-5 text-muted-foreground" />
-          The directory shape
+          {t.spec.dirShape}
         </h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Everything lives under{" "}
@@ -205,7 +203,7 @@ export default function SpecPage() {
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight">
           <Terminal className="size-5 text-muted-foreground" />
-          Segment vs line
+          {t.spec.segmentVsLine}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-border/60 p-4">
@@ -234,7 +232,7 @@ export default function SpecPage() {
       {/* render / fetch contract */}
       <section className="mb-12">
         <h2 className="mb-4 text-xl font-semibold tracking-tight">
-          The render / fetch contract
+          {t.spec.contract}
         </h2>
         <dl className="space-y-4 text-sm">
           <div className="rounded-lg border border-border/60 p-4">
@@ -293,7 +291,7 @@ export default function SpecPage() {
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight">
           <GitPullRequest className="size-5 text-muted-foreground" />
-          Contributing
+          {t.spec.contributing}
         </h2>
         <p className="text-sm text-muted-foreground">
           A new component is a pull request that adds a single{" "}
@@ -335,7 +333,7 @@ export default function SpecPage() {
             rel="noreferrer noopener"
             className="ml-auto text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
           >
-            view source ↗
+            {t.spec.viewSource}
           </a>
         </div>
         <article className="max-w-none text-sm text-foreground/90">

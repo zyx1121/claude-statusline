@@ -7,9 +7,12 @@ import {
   getComponent,
   getOctants,
   snapshotIds,
+  localizedName,
+  localizedDescription,
+  localizedReadme,
   type Component,
-  type ComponentRequires,
 } from "@/lib/registry";
+import { getDict, getLocale, type Dict } from "@/lib/i18n";
 import { MosaicPreview, AnimatedPreview } from "@/components/ansi";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +35,8 @@ import {
 import { CopyButton } from "@/components/copy-button";
 
 // Built-ins are pre-rendered from the snapshot; federated components (added to the
-// registry by PR) render on-demand and are revalidated.
+// registry by PR) render on-demand and are revalidated. The locale cookie makes
+// rendering dynamic per request.
 export const dynamicParams = true;
 export const revalidate = 600;
 
@@ -48,9 +52,10 @@ export async function generateMetadata({
   const { id } = await params;
   const component = await getComponent(id);
   if (!component) return { title: "Not found — claude-statusline" };
+  const locale = await getLocale();
   return {
-    title: `${component.name} — claude-statusline`,
-    description: component.description,
+    title: `${localizedName(component, locale)} — claude-statusline`,
+    description: localizedDescription(component, locale),
   };
 }
 
@@ -62,6 +67,9 @@ export default async function ComponentPage({
   const { id } = await params;
   const component = await getComponent(id);
   if (!component) notFound();
+
+  const locale = await getLocale();
+  const t = getDict(locale);
 
   const install = `/statusline:install ${component.id}`;
   const github = component.author;
@@ -75,26 +83,26 @@ export default async function ComponentPage({
   const configEntries = Object.entries(component.configSchema);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:py-16">
+    <main className="w-full py-10 lg:py-16">
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        All components
+        {t.detail.back}
       </Link>
 
       <header className="mt-6 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-semibold tracking-tight">
-            {component.name}
+            {localizedName(component, locale)}
           </h1>
           {component.version ? (
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-sm text-muted-foreground">
               v{component.version}
             </code>
           ) : null}
-          <TypeBadge type={component.type} />
+          <TypeBadge type={component.type} t={t} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -110,14 +118,14 @@ export default async function ComponentPage({
           ) : (
             <span className="inline-flex items-center gap-1.5">
               <User className="size-4" />
-              unknown author
+              {t.detail.unknownAuthor}
             </span>
           )}
         </div>
 
-        {component.description ? (
+        {localizedDescription(component, locale) ? (
           <p className="max-w-prose text-pretty text-base text-muted-foreground">
-            {component.description}
+            {localizedDescription(component, locale)}
           </p>
         ) : null}
       </header>
@@ -137,11 +145,10 @@ export default async function ComponentPage({
       <section className="mt-8">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Enable this component</CardTitle>
+            <CardTitle className="text-base">{t.detail.enableTitle}</CardTitle>
             <CardDescription>
-              Run this in Claude Code after installing the plugin to add{" "}
-              <code className="font-mono">{component.id}</code> to your active
-              profile.
+              {t.detail.enableDescPre}{" "}
+              <code className="font-mono">{component.id}</code> {t.detail.enableDescPost}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -156,90 +163,91 @@ export default async function ComponentPage({
           needsNetwork={needsNetwork}
           needsSecrets={needsSecrets}
           hosts={networkHosts}
+          t={t}
         />
       </section>
 
       {/* Manifest facts */}
       <section className="mt-10">
-        <h2 className="text-xl font-semibold tracking-tight">Manifest</h2>
+        <h2 className="text-xl font-semibold tracking-tight">{t.detail.manifest}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Everything Claude reads before installing — sourced straight from{" "}
+          {t.detail.manifestDesc}{" "}
           <code className="font-mono">component.json</code>.
         </p>
         <div className="mt-4 rounded-lg border">
           <Table>
             <TableBody>
-              <Fact label="Runtime">
+              <Fact label={t.detail.facts.runtime}>
                 {component.runtime ? (
                   <code className="font-mono">{component.runtime}</code>
                 ) : (
-                  <Muted>unspecified</Muted>
+                  <Muted>{t.detail.muted.unspecified}</Muted>
                 )}
               </Fact>
 
-              <Fact label="Type">
+              <Fact label={t.detail.facts.type}>
                 <span>
                   <code className="font-mono">{component.type}</code>
                   <span className="ml-2 text-xs text-muted-foreground">
                     {component.type === "segment"
-                      ? "in-process, zero fork"
+                      ? t.detail.typeHint.segment
                       : component.type === "line"
-                        ? "forked standalone process"
+                        ? t.detail.typeHint.line
                         : null}
                   </span>
                 </span>
               </Fact>
 
-              <Fact label="Placement">
+              <Fact label={t.detail.facts.placement}>
                 {component.placement.slot ? (
                   <span className="font-mono">
                     {component.placement.slot}
                     {typeof component.placement.order === "number"
-                      ? ` · order ${component.placement.order}`
+                      ? ` · ${t.detail.muted.order} ${component.placement.order}`
                       : ""}
                   </span>
                 ) : (
-                  <Muted>unspecified</Muted>
+                  <Muted>{t.detail.muted.unspecified}</Muted>
                 )}
               </Fact>
 
-              <Fact label="Required binaries">
+              <Fact label={t.detail.facts.reqBin}>
                 {reqBin.length > 0 ? (
                   <BadgeList items={reqBin} mono />
                 ) : (
-                  <Muted>none</Muted>
+                  <Muted>{t.detail.muted.none}</Muted>
                 )}
               </Fact>
 
-              <Fact label="Network">
+              <Fact label={t.detail.facts.network}>
                 {needsNetwork ? (
                   <BadgeList items={networkHosts} mono variant="secondary" />
                 ) : (
-                  <Muted>no network</Muted>
+                  <Muted>{t.detail.muted.noNetwork}</Muted>
                 )}
               </Fact>
 
-              <Fact label="macOS only">
+              <Fact label={t.detail.facts.macos}>
                 {macos.length > 0 ? (
                   <BadgeList items={macos} mono variant="secondary" />
                 ) : (
-                  <Muted>no</Muted>
+                  <Muted>{t.detail.muted.no}</Muted>
                 )}
               </Fact>
 
-              <Fact label="Background fetch">
+              <Fact label={t.detail.facts.fetch}>
                 {component.hasFetch ? (
-                  <Badge variant="secondary">yes</Badge>
+                  <Badge variant="secondary">{t.detail.muted.yes}</Badge>
                 ) : (
-                  <Muted>none</Muted>
+                  <Muted>{t.detail.muted.none}</Muted>
                 )}
               </Fact>
 
-              <Fact label="Secrets / env">
+              <Fact label={t.detail.facts.secrets}>
                 {needsSecrets ? (
-                  <Badge variant="secondary">required</Badge>
+                  <Badge variant="secondary">{t.detail.muted.required}</Badge>
                 ) : (
-                  <Muted>none</Muted>
+                  <Muted>{t.detail.muted.none}</Muted>
                 )}
               </Fact>
             </TableBody>
@@ -250,22 +258,19 @@ export default async function ComponentPage({
       {/* Config schema */}
       {configEntries.length > 0 ? (
         <section className="mt-10">
-          <h2 className="text-xl font-semibold tracking-tight">Configuration</h2>
+          <h2 className="text-xl font-semibold tracking-tight">{t.detail.config}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tunable knobs, set per-profile with{" "}
-            <code className="font-mono">
-              /statusline:configure {component.id}
-            </code>
-            .
+            {t.detail.configDescPre}{" "}
+            <code className="font-mono">/statusline:configure {component.id}</code>.
           </p>
           <div className="mt-4 rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Default</TableHead>
-                  <TableHead>Description</TableHead>
+                  <TableHead>{t.detail.configTable.key}</TableHead>
+                  <TableHead>{t.detail.configTable.type}</TableHead>
+                  <TableHead>{t.detail.configTable.default}</TableHead>
+                  <TableHead>{t.detail.configTable.desc}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -298,18 +303,18 @@ export default async function ComponentPage({
       ) : null}
 
       {/* README */}
-      {component.readme.trim() ? (
+      {localizedReadme(component, locale).trim() ? (
         <section className="mt-12">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold tracking-tight">README</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{t.detail.readme}</h2>
             <Badge variant="outline" className="font-normal">
-              written for Claude
+              {t.detail.readmeBadge}
             </Badge>
           </div>
           <Separator className="mt-3" />
           <article className="mt-6">
             <Markdown components={markdownComponents}>
-              {component.readme}
+              {localizedReadme(component, locale)}
             </Markdown>
           </article>
         </section>
@@ -326,11 +331,11 @@ function asList(v: string[] | boolean | undefined): string[] {
   return Array.isArray(v) ? v : [];
 }
 
-function TypeBadge({ type }: { type: Component["type"] }) {
+function TypeBadge({ type, t }: { type: Component["type"]; t: Dict }) {
   const isSegment = type === "segment";
   return (
     <Badge variant={isSegment ? "default" : "secondary"}>
-      {isSegment ? "segment" : type === "line" ? "line" : type}
+      {isSegment ? t.badges.segment : t.badges.line}
     </Badge>
   );
 }
@@ -339,22 +344,20 @@ function SafetyBanner({
   needsNetwork,
   needsSecrets,
   hosts,
+  t,
 }: {
   needsNetwork: boolean;
   needsSecrets: boolean;
   hosts: string[];
+  t: Dict;
 }) {
   if (!needsNetwork && !needsSecrets) {
     return (
       <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-emerald-500" />
         <span>
-          <span className="font-medium text-foreground">
-            No network, no secrets.
-          </span>{" "}
-          <span className="text-muted-foreground">
-            Runs entirely on local session data.
-          </span>
+          <span className="font-medium text-foreground">{t.detail.safety.noneTitle}</span>{" "}
+          <span className="text-muted-foreground">{t.detail.safety.noneBody}</span>
         </span>
       </div>
     );
@@ -366,18 +369,14 @@ function SafetyBanner({
         <span className="flex items-start gap-2.5">
           <Globe className="mt-0.5 size-4 shrink-0 text-amber-500" />
           <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">
-              Makes network requests
-            </span>{" "}
+            <span className="font-medium text-foreground">{t.detail.safety.networkTitle}</span>{" "}
             {hosts.length > 0 ? (
               <>
-                to{" "}
-                <code className="font-mono text-foreground">
-                  {hosts.join(", ")}
-                </code>
+                {t.detail.safety.networkTo}{" "}
+                <code className="font-mono text-foreground">{hosts.join(", ")}</code>
               </>
             ) : null}
-            . Review the hosts in the manifest below before enabling.
+            . {t.detail.safety.networkBody}
           </span>
         </span>
       ) : null}
@@ -385,10 +384,9 @@ function SafetyBanner({
         <span className="flex items-start gap-2.5">
           <KeyRound className="mt-0.5 size-4 shrink-0 text-amber-500" />
           <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">
-              Reads secrets from the environment.
-            </span>{" "}
-            Provide them via <code className="font-mono">/statusline:configure</code>.
+            <span className="font-medium text-foreground">{t.detail.safety.secretsTitle}</span>{" "}
+            {t.detail.safety.secretsBodyPre}{" "}
+            <code className="font-mono">/statusline:configure</code>.
           </span>
         </span>
       ) : null}

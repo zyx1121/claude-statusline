@@ -3,18 +3,49 @@
   "id": "ratelimit",
   "name": "Rate Limit",
   "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "Claude usage-limit % + reset countdown for a window (5h or 7d). Multi-instance via config.window.",
+  "i18n": {
+    "zh-Hant": {
+      "name": "用量上限",
+      "description": "Claude 用量上限百分比 + 單一時段（5h 或 7d）的重置倒數。透過 config.window 可多重實例。"
+    },
+    "zh-Hans": {
+      "name": "用量上限",
+      "description": "Claude 用量上限百分比 + 单个时段（5h 或 7d）的重置倒计时。通过 config.window 可多实例。"
+    }
+  },
   "type": "segment",
   "runtime": "bash",
-  "render": { "entry": "render.sh" },
-  "inputs": ["rate_limits"],
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [
+    "rate_limits"
+  ],
   "requires": {},
   "config": {
     "schema": {
-      "window": { "enum": ["5h", "7d"], "default": "5h", "desc": "Which rate-limit window to show." }
+      "window": {
+        "enum": [
+          "5h",
+          "7d"
+        ],
+        "default": "5h",
+        "desc": "Which rate-limit window to show."
+      }
     }
   },
-  "placement": { "slot": "row1", "order": 30 },
-  "capabilities": { "stdin_fields": ["rate_limits.five_hour", "rate_limits.seven_day"] }
+  "placement": {
+    "slot": "row1",
+    "order": 30
+  },
+  "capabilities": {
+    "stdin_fields": [
+      "rate_limits.five_hour",
+      "rate_limits.seven_day"
+    ]
+  }
 }

@@ -40,6 +40,18 @@
       "type": "string",
       "description": "One-line summary for Claude to scan the catalog."
     },
+    "i18n": {
+      "type": "object",
+      "description": "Optional localized name/description per BCP-47 locale tag (e.g. zh-Hant, zh-Hans). The top-level name/description stay English (the source Claude reads); these are display translations for the marketplace web.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "description": "Localized display name." },
+          "description": { "type": "string", "description": "Localized one-line summary." }
+        }
+      }
+    },
     "type": {
       "type": "string",
       "description": "segment = inline fragment, in-process bash, zero fork, returns one string via REPLY. line = standalone script, forked, prints one or more whole lines.",

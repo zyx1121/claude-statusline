@@ -3,14 +3,39 @@
   "id": "pr",
   "name": "Pull Request",
   "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "PR number for the current branch with a colour-coded review-state icon (absent until a PR exists).",
+  "i18n": {
+    "zh-Hant": {
+      "name": "Pull Request",
+      "description": "顯示當前 branch 的 PR 編號，附帶依 review state 上色的 icon（沒有 PR 時隱藏）。"
+    },
+    "zh-Hans": {
+      "name": "Pull Request",
+      "description": "显示当前 branch 的 PR 编号，附带按 review state 着色的 icon（没有 PR 时隐藏）。"
+    }
+  },
   "type": "segment",
   "runtime": "bash",
-  "render": { "entry": "render.sh" },
-  "inputs": ["pr.number", "pr.review_state"],
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [
+    "pr.number",
+    "pr.review_state"
+  ],
   "requires": {},
   "config": {},
-  "placement": { "slot": "row2", "order": 20 },
-  "capabilities": { "stdin_fields": ["pr.number", "pr.review_state"] }
+  "placement": {
+    "slot": "row2",
+    "order": 20
+  },
+  "capabilities": {
+    "stdin_fields": [
+      "pr.number",
+      "pr.review_state"
+    ]
+  }
 }

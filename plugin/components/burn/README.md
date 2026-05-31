@@ -2,28 +2,28 @@
 
 ## What it shows
 
-5h 用量預算的**爬升速率**（`%/h`），也就是這個 session 把 5 小時額度燒掉的速度。輸出形如 `burn 12%/h`：`burn` 用 base 灰、數值用 accent 色。只有在算出來的 burn rate `> 0` 時才顯示，額度沒在動（或剛開 session）時整段隱藏。
+The **climb rate** of the 5h usage budget (`%/h`) — i.e. how fast this session is burning through its 5-hour allowance. The output looks like `burn 12%/h`: `burn` renders in the KEY color and the number in the VAL color. It only appears once the computed burn rate is `> 0`; when the budget isn't moving (or the session has just started), the whole segment is hidden.
 
 ## Data sources
 
-- `CC_FIVE_PCT` — 5h 視窗的 `used_percentage`（projected stdin，來自 `rate_limits.five_hour`）。
-- `CC_SID` — session id，用來分隔每個 session 各自的取樣狀態。
-- Per-session 狀態檔 `$STATE/burn.$CC_SID`，內容是 `<epoch> <pct> <rate>` 三欄。每次 render 比較「現在的 pct」與「上次取樣的 pct」，除以經過秒數換算成每小時，只在距上次取樣 ≥ 60s 時才更新檔案與重算速率（短於 60s 的 tick 沿用上次算好的 rate，避免雜訊）。負值會夾成 0。
+- `CC_FIVE_PCT` — the `used_percentage` of the 5h window (projected stdin, from `rate_limits.five_hour`).
+- `CC_SID` — the session id, used to keep each session's sampling state separate.
+- Per-session state file `$STATE/burn.$CC_SID`, holding three fields: `<epoch> <pct> <rate>`. On every render it compares the current `pct` against the last sampled `pct`, divides by the elapsed seconds, and converts to a per-hour rate. The file is only rewritten and the rate recomputed when at least 60s have passed since the last sample (ticks shorter than 60s reuse the previously computed rate, to avoid noise). Negative values are clamped to 0.
 
 ## Config
 
-無。此 segment 不接受任何 config。
+None. This segment takes no config.
 
 ## Requires
 
-- `awk`（速率換算）。
-- loader-scope 變數 `$STATE` — per-machine 狀態根目錄（在 git repo 之外，由 loader 設成 `~/.claude/.statusline-state`）。
+- `awk` (for the rate conversion).
+- The loader-scope variable `$STATE` — the per-machine state root (outside the git repo; set by the loader to `~/.claude/.statusline-state`).
 
 ## Safety notes
 
-- 狀態檔寫在 `$STATE` 底下，**不在** git-synced 的 runtime tree 內；檔名以 `CC_SID` 區隔，session 之間不會互相污染。
-- 只讀 projected stdin 的 `CC_FIVE_PCT` / `CC_SID`，看不到原始 CC JSON。
-- 純算術 + 檔案讀寫，無網路、無外部行程（awk 除外）。
+- The state file lives under `$STATE`, **not** inside the git-synced runtime tree; the filename is keyed by `CC_SID`, so sessions never contaminate each other.
+- It only reads `CC_FIVE_PCT` / `CC_SID` from projected stdin — it never sees the raw CC JSON.
+- Pure arithmetic plus file read/write: no network, no external processes (other than `awk`).
 
 ## Example output
 

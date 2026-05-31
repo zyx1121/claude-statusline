@@ -2,28 +2,28 @@
 
 ## What it shows
 
-正在播放的曲目，格式 `♪ <name> — <artist>`（紫色音符 + base 色文字），截斷到 44 字元。只有當 Apple Music 或 Spotify 正在 **playing** 時才顯示；player 沒開、暫停、或抓不到曲目資訊則整個 segment 隱藏。
+The currently-playing track, formatted as `♪ <name> — <artist>` (a magenta note glyph plus base-colored text), truncated to 44 characters. The segment only appears when Apple Music or Spotify is actively **playing**; if no player is running, playback is paused, or the track info can't be read, the whole segment is hidden.
 
 ## Data sources
 
-- `pgrep -x Spotify` / `pgrep -x Music` — 偵測哪個 player 在跑（Spotify 優先）。
-- `osascript` 對該 player 下 AppleEvent 查 `player state` 與 `current track` 的 `name` / `artist`。
-- 不讀任何 stdin (`CC_*`) 欄位（`inputs: []`）。
+- `pgrep -x Spotify` / `pgrep -x Music` — detects which player is running (Spotify takes priority).
+- `osascript` sends an AppleEvent to that player to read `player state` and the `current track`'s `name` / `artist`.
+- Reads no stdin (`CC_*`) fields (`inputs: []`).
 
 ## Config
 
-無。`component.json` 的 `config` 為空。
+None. The `config` block in `component.json` is empty.
 
 ## Requires
 
-- macOS，且需要對終端 / Claude Code host process 授予 **Automation (AppleEvents/TCC)** 權限去控制 Music / Spotify。
-- `requires.macos: ["AppleEvents"]`。
+- macOS, and your terminal / the Claude Code host process must be granted **Automation (AppleEvents/TCC)** permission to control Music / Spotify.
+- `requires.macos: ["AppleEvents"]`.
 
 ## Safety notes
 
-- **pgrep gate 必須保留**：先用 `pgrep` 確認 player 正在跑才呼叫 `osascript`。沒有它的話，osascript 會在沒有任何 player 時觸發 AppleEvents/TCC 授權彈窗、甚至把停掉的 app 拉起來。
-- app 名稱用 **literal**（`"Spotify"` / `"Music"`）而非變數帶入 tell block — 這樣 scripting dictionary 才能在編譯期解析；變數名做不到。
-- 所有 osascript 錯誤都 `2>/dev/null` 吞掉並回傳空字串，渲染端見空即隱藏，不會吐錯誤到 statusline。
+- **The pgrep gate must stay**: `pgrep` confirms a player is running before `osascript` is called. Without it, `osascript` would trigger the AppleEvents/TCC authorization prompt even when no player is up — and could even launch a stopped app.
+- The app name is passed into the tell block as a **literal** (`"Spotify"` / `"Music"`) rather than a variable, so the scripting dictionary can resolve it at compile time; a variable name can't be statically resolved.
+- All `osascript` errors are swallowed with `2>/dev/null` and return an empty string. The renderer treats empty as hidden, so no error is ever printed to the statusline.
 
 ## Example output
 

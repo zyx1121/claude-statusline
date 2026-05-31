@@ -50,11 +50,31 @@ export interface Component {
   configSchema: Record<string, ConfigField>;
   placement: { slot?: string; order?: number };
   readme: string;
+  /** Localized display name/description per locale (English stays in name/description). */
+  i18n?: Record<string, { name?: string; description?: string }>;
+  /** Per-locale README markdown (en = source-of-truth). Missing/"" falls back to readme. */
+  readmes?: Record<string, string>;
   preview: string;
   /** Animation frames (line widgets) — cycled ~1/s in the UI; absent for static parts. */
   frames?: string[];
   /** Uses octant/block glyphs → render via the pixel decoder, not as text. */
   mosaic?: boolean;
+}
+
+export interface ProfileInstance {
+  id: string;
+  slot?: string;
+  order?: number;
+  config?: Record<string, unknown>;
+}
+
+/** A profile = a named composition of component instances placed into slots. */
+export interface Profile {
+  name: string;
+  description?: string;
+  rule?: boolean;
+  side_effects?: string[];
+  components: ProfileInstance[];
 }
 
 export interface Source {
@@ -76,11 +96,25 @@ export interface Registry {
   sources: Source[];
   components: Component[];
   byAuthor: AuthorGroup[];
+  profiles: Profile[];
   live: boolean;
+}
+
+/** Pick the localized display name / description / README, falling back to English. */
+export function localizedName(c: Component, locale: string): string {
+  return c.i18n?.[locale]?.name?.trim() || c.name;
+}
+export function localizedDescription(c: Component, locale: string): string {
+  return c.i18n?.[locale]?.description?.trim() || c.description;
+}
+export function localizedReadme(c: Component, locale: string): string {
+  const r = c.readmes?.[locale];
+  return (r && r.trim() ? r : c.readme) || "";
 }
 
 export const REPO = "zyx1121/claude-statusline";
 export const REPO_URL = `https://github.com/${REPO}`;
+export const SITE_URL = "https://claude-statusline.vercel.app";
 export const INSTALL = {
   marketplace: "/plugin marketplace add zyx1121/claude-statusline",
   plugin: "/plugin install statusline@claude-statusline",
@@ -134,6 +168,7 @@ function toComponent(
   id: string,
   readme: string,
   preview: string,
+  readmes?: Record<string, string>,
 ): Component {
   const requires = asObj(m.requires);
   const caps = asObj(m.capabilities);
@@ -169,7 +204,9 @@ function toComponent(
     },
     configSchema,
     placement: asObj(m.placement) as Component["placement"],
+    i18n: asObj(m.i18n) as Component["i18n"],
     readme,
+    readmes: readmes ?? { en: readme },
     preview,
   };
 }
@@ -197,6 +234,8 @@ function groupByAuthor(components: Component[]): AuthorGroup[] {
 // snapshot.mjs against the same shape, so assert it back to Component[].
 const SNAPSHOT_COMPONENTS = snapshot.components as unknown as Component[];
 
+const SNAPSHOT_PROFILES = ((snapshot as { profiles?: unknown }).profiles ?? []) as Profile[];
+
 function fromSnapshot(): Registry {
   const components = SNAPSHOT_COMPONENTS.slice().sort((a, b) =>
     a.name.localeCompare(b.name, "en", { sensitivity: "base" }),
@@ -205,6 +244,7 @@ function fromSnapshot(): Registry {
     sources: snapshot.sources as Source[],
     components,
     byAuthor: groupByAuthor(components),
+    profiles: SNAPSHOT_PROFILES,
     live: false,
   };
 }
@@ -227,11 +267,17 @@ async function listSourceIds(src: Source): Promise<string[]> {
 async function fetchOneComponent(src: Source, id: string): Promise<Component | null> {
   const m = await ghJson<Record<string, unknown>>(rawUrl(src, `${id}/component.json`));
   if (!m) return null;
-  const [readme, preview] = await Promise.all([
+  const [readme, preview, rHant, rHans] = await Promise.all([
     ghText(rawUrl(src, `${id}/README.md`)),
     ghText(rawUrl(src, `${id}/preview.txt`)),
+    ghText(rawUrl(src, `${id}/README.zh-Hant.md`)),
+    ghText(rawUrl(src, `${id}/README.zh-Hans.md`)),
   ]);
-  return toComponent(m, src, id, readme, preview);
+  return toComponent(m, src, id, readme, preview, {
+    en: readme,
+    "zh-Hant": rHant,
+    "zh-Hans": rHans,
+  });
 }
 
 let memo: Promise<Registry> | null = null;
@@ -289,9 +335,17 @@ export async function getRegistry(): Promise<Registry> {
     const components = [...base.components, ...added].sort((a, b) =>
       a.name.localeCompare(b.name, "en", { sensitivity: "base" }),
     );
-    return { sources, components, byAuthor: groupByAuthor(components), live };
+    return { sources, components, byAuthor: groupByAuthor(components), profiles: base.profiles, live };
   })();
   return memo;
+}
+
+export async function getProfiles(): Promise<Profile[]> {
+  return (await getRegistry()).profiles;
+}
+
+export async function getProfile(name: string): Promise<Profile | null> {
+  return (await getRegistry()).profiles.find((p) => p.name === name) ?? null;
 }
 
 export async function getComponents(): Promise<Component[]> {
@@ -305,6 +359,11 @@ export async function getComponent(id: string): Promise<Component | null> {
 /** Build-time list of ids for generateStaticParams (snapshot — always available). */
 export function snapshotIds(): string[] {
   return SNAPSHOT_COMPONENTS.map((c) => c.id);
+}
+
+/** Build-time list of profile names for generateStaticParams (install routes). */
+export function snapshotProfileNames(): string[] {
+  return SNAPSHOT_PROFILES.map((p) => p.name);
 }
 
 /** The render/fetch authoring contract (CONTRACT.md), for the /spec page. */

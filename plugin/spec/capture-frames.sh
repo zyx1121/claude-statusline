@@ -22,6 +22,15 @@ for dir in "$COMP"/*/; do
   case "$id" in creatures) flags=(--ground grass --resident 132);; esac
 
   st=$(mktemp -d)
+  # Components with a background fetch (news, stock-ticker) render from a cache —
+  # populate it once up front, or every captured frame is blank (an empty cache
+  # renders an all-spaces ticker). Mirrors capture-previews.sh.
+  fetch_entry=$(jq -r '.fetch.entry // empty' "$mf")
+  if [ -n "$fetch_entry" ]; then
+    fetch_args=()
+    while IFS= read -r a; do [ -n "$a" ] && fetch_args+=("$a"); done < <(jq -r '.fetch.args // [] | .[]' "$mf")
+    STATUSLINE_STATE="$st" STATUSLINE_CONFIG="$dir" "$runtime" "${dir}${fetch_entry}" "${fetch_args[@]}" >/dev/null 2>&1
+  fi
   for _ in 1 2 3 4; do
     STATUSLINE_STATE="$st" STATUSLINE_CONFIG="$dir" "$runtime" "${dir}${entry}" "$COLS" --session cap "${flags[@]}" >/dev/null 2>&1
   done

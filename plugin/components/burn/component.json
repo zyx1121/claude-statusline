@@ -3,14 +3,45 @@
   "id": "burn",
   "name": "Usage Burn Rate",
   "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "How fast the 5h usage budget is climbing (%/h), sampled over ≥60s windows per session.",
+  "i18n": {
+    "zh-Hant": {
+      "name": "用量燒錄速率",
+      "description": "5h 用量預算爬升的速度（%/h），以每 session ≥60s 的時間窗取樣。"
+    },
+    "zh-Hans": {
+      "name": "用量燃烧速率",
+      "description": "5h 用量预算爬升的速度（%/h），以每 session ≥60s 的时间窗采样。"
+    }
+  },
   "type": "segment",
   "runtime": "bash",
-  "render": { "entry": "render.sh" },
-  "inputs": ["rate_limits.five_hour"],
-  "requires": { "bin": ["awk"] },
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [
+    "rate_limits.five_hour"
+  ],
+  "requires": {
+    "bin": [
+      "awk"
+    ]
+  },
   "config": {},
-  "placement": { "slot": "row2", "order": 30 },
-  "capabilities": { "fs_write": ["$STATE"], "stdin_fields": ["rate_limits.five_hour", "session_id"] }
+  "placement": {
+    "slot": "row2",
+    "order": 30
+  },
+  "capabilities": {
+    "fs_write": [
+      "$STATE"
+    ],
+    "stdin_fields": [
+      "rate_limits.five_hour",
+      "session_id"
+    ]
+  }
 }

@@ -26,8 +26,6 @@ export CC_COST="12.40"
 export CC_PR_NUM="7"; export CC_PR_STATE="approved"
 export CC_SID="$SID"
 export CC_PROJECT_DIR="$(cd "$HERE/.." && pwd)"   # the claude-statusline repo (a real git repo)
-# loader-scope vars some segments read
-pve_run="6"; pve_total="7"
 STATE="$(mktemp -d)"; export STATE
 USER_COMPONENTS="/nonexistent"; PLUGIN_COMPONENTS="$COMP"
 
@@ -50,7 +48,6 @@ write git        "$(seg git)"
 write pr         "$(seg pr)"
 write nowplaying "$(printf '%b♪%b %bSunset Lover — Honne%b' "$MAGENTA" "$RESET" "$KEY" "$RESET")"  # no live player in CI → representative
 write burn       "$(printf '%bburn%b %b3%%/h%b' "$KEY" "$RESET" "$VAL" "$RESET")"                  # needs warmed state → representative
-write pve        "$(seg pve)"
 
 echo "line widgets:"
 # news + stock-ticker: fetch once (network), then capture a scroll frame

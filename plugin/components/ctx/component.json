@@ -3,14 +3,37 @@
   "id": "ctx",
   "name": "Context Usage",
   "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "Context-window usage percentage, turning red at ≥80%.",
+  "i18n": {
+    "zh-Hant": {
+      "name": "Context 使用量",
+      "description": "Context window 使用量百分比，≥80% 時轉為紅色。"
+    },
+    "zh-Hans": {
+      "name": "Context 使用量",
+      "description": "Context window 使用量百分比，≥80% 时变为红色。"
+    }
+  },
   "type": "segment",
   "runtime": "bash",
-  "render": { "entry": "render.sh" },
-  "inputs": ["context_window.used_percentage"],
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [
+    "context_window.used_percentage"
+  ],
   "requires": {},
   "config": {},
-  "placement": { "slot": "row1", "order": 20 },
-  "capabilities": { "stdin_fields": ["context_window.used_percentage"] }
+  "placement": {
+    "slot": "row1",
+    "order": 20
+  },
+  "capabilities": {
+    "stdin_fields": [
+      "context_window.used_percentage"
+    ]
+  }
 }

@@ -2,25 +2,59 @@
   "$schema": "statusline/component@1",
   "id": "creatures",
   "name": "Creatures",
-  "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "version": "0.2.0",
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "A tiny Seer-creature world that paces across the status line (pure local animation, one tick per refresh).",
-  "type": "line",
-  "runtime": "python3",
-  "render": { "entry": "render.py", "ttl": 1 },
-  "inputs": ["session_id"],
-  "requires": { "bin": ["python3"] },
-  "config": {
-    "schema": {
-      "ground": { "type": "string", "default": "grass", "desc": "Ground strip style under the creatures (\"grass\" paints a time-of-day grass strip; anything else = bare)." },
-      "resident": { "type": "number", "default": 132, "desc": "Dex number of the permanent resident creature that never expires (default 132 = Ditto)." }
+  "i18n": {
+    "zh-Hant": {
+      "name": "寶可怪",
+      "description": "在 status line 上踱步的 Seer 寶可怪微型世界（純本機動畫，每次 refresh 一個 tick）。"
+    },
+    "zh-Hans": {
+      "name": "宝可怪",
+      "description": "在 status line 上踱步的 Seer 宝可怪微型世界（纯本机动画，每次 refresh 一个 tick）。"
     }
   },
-  "placement": { "slot": "middle", "order": 10 },
+  "type": "line",
+  "runtime": "python3",
+  "render": {
+    "entry": "render.py",
+    "ttl": 1
+  },
+  "inputs": [
+    "session_id"
+  ],
+  "requires": {
+    "bin": [
+      "python3"
+    ]
+  },
+  "config": {
+    "schema": {
+      "ground": {
+        "type": "string",
+        "default": "grass",
+        "desc": "Ground strip style under the creatures (\"grass\" paints a time-of-day grass strip; anything else = bare)."
+      },
+      "resident": {
+        "type": "number",
+        "default": 132,
+        "desc": "Dex number of the permanent resident creature that never expires (default 132 = Ditto)."
+      }
+    }
+  },
+  "placement": {
+    "slot": "middle",
+    "order": 10
+  },
   "capabilities": {
     "network": [],
     "exec": false,
-    "fs_write": ["$STATE_DIR"],
+    "fs_write": [
+      "$STATE_DIR"
+    ],
     "stdin_fields": []
   }
 }

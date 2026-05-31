@@ -3,14 +3,42 @@
   "id": "git",
   "name": "Git State",
   "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "Repo state for the workspace: (branch) plus dirty <elapsed> / ahead <N> / commits <N> when present.",
+  "i18n": {
+    "zh-Hant": {
+      "name": "Git 狀態",
+      "description": "顯示 workspace 的倉庫狀態：(branch)，並在有資料時附上 dirty <elapsed> / ahead <N> / commits <N>。"
+    },
+    "zh-Hans": {
+      "name": "Git 状态",
+      "description": "显示 workspace 的仓库状态：(branch)，并在有数据时附上 dirty <elapsed> / ahead <N> / commits <N>。"
+    }
+  },
   "type": "segment",
   "runtime": "bash",
-  "render": { "entry": "render.sh" },
-  "inputs": ["workspace.project_dir"],
-  "requires": { "bin": ["git"] },
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [
+    "workspace.project_dir"
+  ],
+  "requires": {
+    "bin": [
+      "git"
+    ]
+  },
   "config": {},
-  "placement": { "slot": "row2", "order": 10 },
-  "capabilities": { "exec": true, "stdin_fields": ["workspace.project_dir"] }
+  "placement": {
+    "slot": "row2",
+    "order": 10
+  },
+  "capabilities": {
+    "exec": true,
+    "stdin_fields": [
+      "workspace.project_dir"
+    ]
+  }
 }
