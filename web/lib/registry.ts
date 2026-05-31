@@ -189,10 +189,14 @@ function groupByAuthor(components: Component[]): AuthorGroup[] {
   );
 }
 
+// The JSON import widens `type` to string; the snapshot is produced by our own
+// snapshot.mjs against the same shape, so assert it back to Component[].
+const SNAPSHOT_COMPONENTS = snapshot.components as unknown as Component[];
+
 function fromSnapshot(): Registry {
-  const components = (snapshot.components as Component[])
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+  const components = SNAPSHOT_COMPONENTS.slice().sort((a, b) =>
+    a.name.localeCompare(b.name, "en", { sensitivity: "base" }),
+  );
   return {
     sources: snapshot.sources as Source[],
     components,
@@ -296,7 +300,7 @@ export async function getComponent(id: string): Promise<Component | null> {
 
 /** Build-time list of ids for generateStaticParams (snapshot — always available). */
 export function snapshotIds(): string[] {
-  return (snapshot.components as Component[]).map((c) => c.id);
+  return SNAPSHOT_COMPONENTS.map((c) => c.id);
 }
 
 /** The render/fetch authoring contract (CONTRACT.md), for the /spec page. */
