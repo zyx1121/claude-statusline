@@ -113,8 +113,14 @@ export function Preview({ ansi, className = "" }: { ansi: string; className?: st
   const lines = ansi.replace(/\n+$/, "").split("\n");
   return (
     <div
+      // LegacyComputing first (unicode-range scoped to the sprite glyphs); every
+      // other char falls through to the mono stack.
+      style={{
+        fontFamily:
+          '"LegacyComputing", var(--font-geist-mono), ui-monospace, monospace',
+      }}
       className={
-        "overflow-x-auto rounded-md border border-border/60 bg-[#0c0d12] px-3 py-2 font-mono text-[11px] leading-[1.35] text-neutral-300 " +
+        "overflow-x-auto rounded-md border border-border/60 bg-[#0c0d12] px-3 py-2 text-[11px] leading-[1.35] text-neutral-300 " +
         className
       }
     >
