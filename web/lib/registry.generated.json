@@ -1,0 +1,340 @@
+{
+  "generatedFrom": "plugin/components",
+  "components": [
+    {
+      "id": "ctx",
+      "name": "Context Usage",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Context-window usage percentage, turning red at ≥80%.",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {},
+      "placement": {
+        "slot": "row1",
+        "order": 20
+      },
+      "readme": "# ctx\n\n## What it shows\n\nThe current context-window usage as a percentage (`ctx 16%`), shown as an inline segment. The value turns red at ≥80% so you can see when you're approaching the limit at a glance.\n\n## Data sources\n\n- The Claude Code stdin JSON only — `context_window.used_percentage`. No network, no cache.\n\n## Config\n\nNone.\n\n## Requires\n\n- `bash` (it's an in-process segment; zero fork)\n\n## Safety notes\n\n- Reads a single projected stdin field (`context_window.used_percentage`) and nothing else.\n- No network, no filesystem writes, no secrets.\n\n## Example output\n\n```\nctx 16%\n```\n"
+    },
+    {
+      "id": "creatures",
+      "name": "Creatures",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "A tiny Seer-creature world that paces across the status line (pure local animation, one tick per refresh).",
+      "type": "line",
+      "runtime": "python3",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [
+          "python3"
+        ],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {
+        "ground": {
+          "type": "string",
+          "default": "grass",
+          "desc": "Ground strip style under the creatures (\"grass\" paints a time-of-day grass strip; anything else = bare)."
+        },
+        "resident": {
+          "type": "number",
+          "default": 132,
+          "desc": "Dex number of the permanent resident creature that never expires (default 132 = Ditto)."
+        }
+      },
+      "placement": {
+        "slot": "middle",
+        "order": 10
+      },
+      "readme": "# creatures\n\n一個 line widget — 在 status line 上放一隻隻 Seer 寶可怪走來走去的微型世界。純本機動畫，不碰網路。\n\n## What it shows\n\n多列（預設 10 列）octant block（2×4 sub-pixel 一格、一格兩色）算圖的動畫舞台。每次 status line refresh = 一個 tick：creatures 左右踱步，碰到邊緣或彼此會轉身（不重疊），活一陣子後消失、換別的出現。同時最多幾隻共用畫面。物種抽自完整 dex（種類 1–500），lazy load — 每 tick 只讀當下在畫面上的那幾隻。另有常駐 resident（預設 132 = 百變怪，永不消失）、偶發流星、`ground=\"grass\"` 時依本地時間切換的草地色帶（一天 8 段）。輸出允許任意多列（unlike segment 只回單一字串）。\n\n## Data sources\n\n- `STATUSLINE_CONFIG/assets/` — sprite store：`index.json`（dex 索引 + sx/sy）、`octant.txt`（octant glyph 表）、`<dex>.json` 或 `<dex>.json.gz`（各物種 sprite，lazy load）。loader 不必傳 `--data`，預設就指到這裡。\n- `--session <id>`：per-session 世界，每個 Claude Code session 各有自己的 creatures（state 檔以 session id 命名）。\n- 無任何 stdin CC_* 欄位、無網路 — 動畫狀態全來自本機 state 檔。\n\n## Config\n\nloader 把 config scalar 轉成 `--<key> <value>` flag 傳入。\n\n| key | type | default | 說明 |\n|-----|------|---------|------|\n| `ground` | string | `grass` | 草地色帶樣式。`grass` 畫一條依時間變色的草地讓 creatures 站在上面；其他值 = 不畫地面（creatures 貼底）。|\n| `resident` | number | `132` | 常駐物種的 dex 編號，永不過期、一直在踱步。預設 132（百變怪）。|\n\n## Requires\n\n- `python3`（純 stdlib，無第三方套件）。\n\n## Safety notes\n\n- `capabilities.network = []`、`exec = false` — 不開網路、不 shell out。\n- 只寫 `$STATE_DIR`（`STATUSLINE_STATE`，在 git repo 之外）：per-session state 檔 `.statusline-creatures.<safe-session>.state.json`。session id 經 `[^A-Za-z0-9_-]` 過濾 + 截 64 字後才併進檔名，避免 path traversal。\n- 閒置超過 3 天的 per-session state 檔會被偶發（每 tick ~1% 機率）清掉。\n- sprite assets 走 `STATUSLINE_CONFIG`（in-repo），standalone 跑時 fallback 到 `Path(__file__).parent`；state 走 `STATUSLINE_STATE`，fallback 到 `~/.claude`。\n\n## Example output\n\n10 列 octant block 動畫，每格帶 24-bit 前景/背景色 ANSI。一隻百變怪站在草地上、旁邊偶有別的物種路過，畫面逐 tick 移動。屬視覺動畫，無法用純文字忠實呈現——直接跑：\n\n```sh\nSTATUSLINE_STATE=/tmp/creatures STATUSLINE_CONFIG=$PWD \\\n  python3 render.py 120 --session demo --ground grass --resident 132\n```\n"
+    },
+    {
+      "id": "git",
+      "name": "Git State",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Repo state for the workspace: (branch) plus dirty <elapsed> / ahead <N> / commits <N> when present.",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [
+          "git"
+        ],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {},
+      "placement": {
+        "slot": "row2",
+        "order": 10
+      },
+      "readme": "# git\n\n`row2` segment，顯示目前 workspace 的 Git 倉庫狀態。\n\n## What it shows\n\n依序組出最多四段，用標準分隔符 ` · ` 串成單一 segment：\n\n- `(branch)` — 目前分支名（MAGENTA）；detached HEAD 時 fallback 成 short SHA。\n- `dirty <elapsed>` — 有未提交變更時顯示，數字是距離 HEAD commit 的經過時間（`Ns` / `Nm` / `Nh` / `Nd`）。取不到 commit 時間時顯示 `—`。\n- `ahead <N>` — 領先 upstream 但尚未 push 的 commit 數，`N > 0` 才出現。\n- `commits <N>` — 本地午夜以來 authored 的 commit 數，`N > 0` 才出現。\n\n`(branch)` 用 MAGENTA；其餘走 KEY/VAL（灰底 + 暖色數值）。沒有任何一段時整個 segment 隱藏（不設 `$REPLY`）。\n\n## Data sources\n\n- `CC_PROJECT_DIR`（projected stdin，對應 `workspace.project_dir`）— 倉庫根目錄。\n- `git` CLI，全程帶 `GIT_OPTIONAL_LOCKS=0`（`symbolic-ref` / `rev-parse` / `status --porcelain` / `log` / `rev-list`），避免 statusline 每 tick 去碰 `.git` 的 optional lock。\n\n## Config\n\n無。`$1`（config JSON）不使用。\n\n## Requires\n\n- `git` binary（`requires.bin`）。\n\n## Safety notes\n\n- 只在 `[ -n \"$CC_PROJECT_DIR\" ] && [ -d \"$CC_PROJECT_DIR/.git\" ]` 成立時才執行任何 git 指令；其餘狀況直接 `return 0`。\n- 所有 git 呼叫 `2>/dev/null`，倉庫異常（無 upstream、空倉庫等）時對應段落自動省略，不報錯。\n- `GIT_OPTIONAL_LOCKS=0` 確保唯讀，不會替倉庫建立 lock 檔。\n\n## Example output\n\n```\n(main) · dirty 0s · ahead 1 · commits 3\n```\n\nclean 倉庫（無 dirty / 無 ahead）：\n\n```\n(dev) · commits 1\n```\n"
+    },
+    {
+      "id": "model",
+      "name": "Model Name",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Current model display name in cyan.",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {},
+      "placement": {
+        "slot": "row1",
+        "order": 10
+      },
+      "readme": "# model\n\n## What it shows\n\n目前使用中的模型顯示名稱（`model.display_name`），以 cyan 色呈現。放在 row1 最前面（order=10）。\n\n## Data sources\n\n- `CC_MODEL` — 由 loader 從 stdin JSON 的 `model.display_name` 投影而來。空字串代表沒有模型資訊，此時 segment 不輸出。\n\n## Config\n\n無。`component.json` 的 `config` 為空物件，`render__model` 忽略 `$1`。\n\n## Requires\n\n無外部依賴（無 binary、無 fetch、無 cache）。只用 core.sh 提供的 `CYAN` / `RESET`。\n\n## Safety notes\n\n- 純讀取已投影的 `CC_MODEL` env，不碰原始 stdin JSON、不 fork、不寫任何 state。\n- `CC_MODEL` 空時 `return 0` 不設 `REPLY`，segment 隱藏。\n\n## Example output\n\n```\nOpus 4.8 (1M context)\n```\n\n（實際以 cyan 著色，後接 `RESET`。）\n"
+    },
+    {
+      "id": "news",
+      "name": "News Ticker",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Right-scrolling Google News headline ticker (zh-TW RSS, keyless).",
+      "type": "line",
+      "runtime": "python3",
+      "hasFetch": true,
+      "network": [
+        "news.google.com"
+      ],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [
+          "python3"
+        ],
+        "network": [
+          "news.google.com"
+        ],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {
+        "topics": {
+          "type": "array",
+          "default": [
+            "top",
+            "台灣",
+            "國際",
+            "科技"
+          ],
+          "desc": "Topics. top=Google News top stories, anything else=a search keyword."
+        }
+      },
+      "placement": {
+        "slot": "top",
+        "order": 10
+      },
+      "readme": "# news — 新聞跑馬燈 (line widget)\n\n由右向左捲動的單行新聞跑馬燈，放在 statusline 最頂端 (`slot: top`)。\n\n## What it shows\n\n一行 CJK 寬度對齊的 Google News 標題環圈，每個 tick 向左推進一格 (right-to-left scroll)。\n標題以 `_safe(session)` 為種子、加上 cache 的整點小時數做 per-session 洗牌排序：同一小時內穩定、不同 session 不同序、每小時換序。顏色為冷調淺灰 (`\\033[38;2;168;178;194m`)。沒有快取資料時輸出整行空白 (維持版面高度)。\n\n## Data sources\n\n- Google News RSS (keyless)，`hl=zh-TW&gl=TW&ceid=TW:zh-Hant`。\n- `--fetch` 模式拉取設定的各 topic feed (`top` = top stories，其餘 = `<keyword> when:1d` 搜尋)，清洗標題 (去掉尾端 ` - <source>`)、去重，atomic 寫入 cache。\n- render 模式只讀 cache；當 cache 的小時數或 topics 有變動，會 fire 一個 detached `--fetch` 並先用現有 cache 繪製 — 永不阻塞網路。\n- Fetch 由 render path 自行觸發 (`self_managed`，約每小時)；`fetch.ttl` 為 3600。\n\n## Config\n\n- `topics` (array) — topic 清單，預設 `[\"top\", \"台灣\", \"國際\", \"科技\"]`。\n- 設定檔 `topics.default`：一行一個 topic，`#` 開頭為註解。`top` = Google News top stories，其餘字串當作 Google News 搜尋關鍵字。\n- loader 透過 `STATUSLINE_CONFIG` 指向本 component 目錄，render.py 從該目錄讀 `topics.default`。\n\n## Requires\n\n- `python3` (pure stdlib，無第三方套件)。\n- 對外網路：`news.google.com`。\n\n## Safety notes\n\n- 所有 cache / lock / per-session state 檔都寫在 `STATUSLINE_STATE` (loader 提供的 per-component state 目錄，位於 git repo 之外)；standalone 執行時 fallback 到 `~/.claude`。\n- Fetch 有 `LOCK` + `FETCH_COOLDOWN`(120s) 防止重複 spawn。\n- 過期的 per-session state 檔 (`.statusline-news.*.state.json`) 以 `SESSION_TTL_DAYS`(3 天) 偶發 prune。\n- Cache 寫入採 tmp + `os.replace` atomic，render tick 不會讀到半寫狀態。\n- 不讀任何 stdin 欄位 (`stdin_fields: []`)；只接 `<cols>` 與 `--session <sid>`。\n\n## Example output\n\n```\n台積電法說會釋出樂觀展望 · 國際油價收高 · AI 晶片需求持續強勁 · ...\n```\n\n(實際為冷灰色、隨 tick 向左捲動的單行視窗。)\n"
+    },
+    {
+      "id": "nowplaying",
+      "name": "Now Playing",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Currently-playing track (name — artist) from Apple Music or Spotify, truncated to 44 chars.",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [],
+        "network": [],
+        "macos": [
+          "AppleEvents"
+        ],
+        "env": []
+      },
+      "configSchema": {},
+      "placement": {
+        "slot": "row2",
+        "order": 40
+      },
+      "readme": "# nowplaying\n\n## What it shows\n\n正在播放的曲目，格式 `♪ <name> — <artist>`（紫色音符 + base 色文字），截斷到 44 字元。只有當 Apple Music 或 Spotify 正在 **playing** 時才顯示；player 沒開、暫停、或抓不到曲目資訊則整個 segment 隱藏。\n\n## Data sources\n\n- `pgrep -x Spotify` / `pgrep -x Music` — 偵測哪個 player 在跑（Spotify 優先）。\n- `osascript` 對該 player 下 AppleEvent 查 `player state` 與 `current track` 的 `name` / `artist`。\n- 不讀任何 stdin (`CC_*`) 欄位（`inputs: []`）。\n\n## Config\n\n無。`component.json` 的 `config` 為空。\n\n## Requires\n\n- macOS，且需要對終端 / Claude Code host process 授予 **Automation (AppleEvents/TCC)** 權限去控制 Music / Spotify。\n- `requires.macos: [\"AppleEvents\"]`。\n\n## Safety notes\n\n- **pgrep gate 必須保留**：先用 `pgrep` 確認 player 正在跑才呼叫 `osascript`。沒有它的話，osascript 會在沒有任何 player 時觸發 AppleEvents/TCC 授權彈窗、甚至把停掉的 app 拉起來。\n- app 名稱用 **literal**（`\"Spotify\"` / `\"Music\"`）而非變數帶入 tell block — 這樣 scripting dictionary 才能在編譯期解析；變數名做不到。\n- 所有 osascript 錯誤都 `2>/dev/null` 吞掉並回傳空字串，渲染端見空即隱藏，不會吐錯誤到 statusline。\n\n## Example output\n\n```\n♪ Bohemian Rhapsody — Queen\n```\n"
+    },
+    {
+      "id": "pr",
+      "name": "Pull Request",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "PR number for the current branch with a colour-coded review-state icon (absent until a PR exists).",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {},
+      "placement": {
+        "slot": "row2",
+        "order": 20
+      },
+      "readme": "# pr\n\n## What it shows\n\n當前 branch 對應的 PR：`PR#<number>` 後面接一個依 review state 上色的 icon。沒有 PR 時整段隱藏。\n\nreview state → icon / 顏色對照：\n\n| state | icon | 顏色 |\n|-------|------|------|\n| `approved` | `✓` | `BOLD_GREEN` |\n| `changes_requested` | `✗` | `BOLD_RED` |\n| `pending` | `·` | `YELLOW` |\n| `draft` | `◌` | `DIM` |\n| 其他 / 未知 | （無 icon） | — |\n\n無 icon 時只印 `PR#<number>`。\n\n## Data sources\n\n純讀 projected-stdin env，零 fork：\n\n- `CC_PR_NUM` ← stdin `pr.number`\n- `CC_PR_STATE` ← stdin `pr.review_state`\n\nPR 偵測本身由 host 在投影 stdin 前完成；本 component 不自己跑 `gh`。\n\n## Config\n\n無。\n\n## Requires\n\n無外部 binary / network。\n\n## Safety notes\n\n- 空字串即「無 PR」（新 contract 已移除舊 monolith 的 `\"-\"` sentinel），故僅以 `[ -n \"$CC_PR_NUM\" ]` 把關。\n- 透過 `printf -v REPLY` 回傳，KEY/VAL/RESET 內的字面 `\\033` 在此被解讀成真正的 ESC。不 echo 到 stdout。\n\n## Example output\n\n```\nPR#161 ✓        # approved\nPR#161 ·        # pending\nPR#161          # 未知 state，無 icon\n```\n"
+    },
+    {
+      "id": "ratelimit",
+      "name": "Rate Limit",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Claude usage-limit % + reset countdown for a window (5h or 7d). Multi-instance via config.window.",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {
+        "window": {
+          "enum": [
+            "5h",
+            "7d"
+          ],
+          "default": "5h",
+          "desc": "Which rate-limit window to show."
+        }
+      },
+      "placement": {
+        "slot": "row1",
+        "order": 30
+      },
+      "readme": "# ratelimit\n\n## What it shows\n\nA usage-limit gauge for one window — the 5-hour session limit or the 7-day weekly limit — as a percentage plus a reset countdown (`5h 22% 2h30m`). The percentage turns red at ≥80%. Add it twice in a profile (with different `window` config) to show both windows side by side.\n\n## Data sources\n\n- The Claude Code stdin JSON only — `rate_limits.five_hour` / `rate_limits.seven_day` (`used_percentage` + `resets_at`). No network, no cache.\n\n## Config\n\n| Key | Type | Default | Meaning |\n|-----|------|---------|---------|\n| `window` | string (`5h` \\| `7d`) | `5h` | Which rate-limit window to display. |\n\n## Requires\n\n- `bash` (in-process segment; zero fork)\n\n## Safety notes\n\n- Reads only the projected `rate_limits.*` stdin fields.\n- No network, no filesystem writes, no secrets.\n\n## Example output\n\n```\n5h 22% 2h30m\n7d 38% 4d\n```\n"
+    },
+    {
+      "id": "cost",
+      "name": "Session Cost",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Session cost in USD, shown once it climbs above zero.",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {},
+      "placement": {
+        "slot": "row1",
+        "order": 40
+      },
+      "readme": "# cost\n\n## What it shows\n\n本 session 累計花費（美金），格式 `$%.2f`（例如 `$1.27`）。數值以 accent 色（`VAL`）顯示。\n\n## Data sources\n\n- `CC_COST` — 由 loader 從 stdin JSON 的 `cost.total_cost_usd` 投影而來。\n\n## Config\n\n無。config-less segment，`$1` 接到的 JSON 會被忽略。\n\n## Requires\n\n無外部依賴。只用 core.sh 的 `VAL` / `RESET` palette 變數。\n\n## Safety notes\n\n- 空字串、`\"0\"`、舊 sentinel `\"-\"` 一律 `return 0`（不設 `REPLY`），所以只有花費 > 0 才會顯示。\n- 不寫 stdout、不 fork、不碰檔案系統。\n\n## Example output\n\n```\n$1.27\n```\n"
+    },
+    {
+      "id": "stock-ticker",
+      "name": "Stock Ticker",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "Left-scrolling Taiwan stock ticker (TWSE quotes, keyless).",
+      "type": "line",
+      "runtime": "python3",
+      "hasFetch": true,
+      "network": [
+        "mis.twse.com.tw"
+      ],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [
+          "python3"
+        ],
+        "network": [
+          "mis.twse.com.tw"
+        ],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {
+        "symbols": {
+          "type": "array",
+          "default": [
+            "t00",
+            "0050",
+            "2353",
+            "2382",
+            "3231"
+          ],
+          "desc": "TWSE symbols. t00=TAIEX index, 4-digit=TSE code, otc:<code>=TPEx."
+        }
+      },
+      "placement": {
+        "slot": "bottom",
+        "order": 10
+      },
+      "readme": "# stock-ticker\n\n## What it shows\n\nA left-to-right scrolling ticker of Taiwan stock quotes on its own line at the bottom of the status bar — index + named stocks with price and percent change, coloured red-up / green-down per Taiwan convention (`TWII 44,733 +2.5% · 廣達 339.00 +9.9%`).\n\n## Data sources\n\n- **TWSE MIS** (`mis.twse.com.tw`) — keyless public quote endpoint. One multi-symbol call per fetch. `render` only reads the local cache; `fetch` (every 60s) refreshes it.\n\n## Config\n\n| Key | Type | Default | Meaning |\n|-----|------|---------|---------|\n| `symbols` | array | `[\"t00\",\"0050\",\"2353\",\"2382\",\"3231\"]` | TWSE symbols. `t00` = TAIEX index, 4-digit = TSE code, `otc:<code>` = TPEx-listed. |\n\n## Requires\n\n- `python3` on PATH\n- Network access to `mis.twse.com.tw` (only during background fetch)\n\n## Safety notes\n\n- `render` never touches the network — it only reads the cached quotes.\n- No secrets, no auth, no write outside the component's state dir.\n\n## Example output\n\n```\n TWII 44,733 +2.5% · 元大台灣50 105.40 +4.9% · 宏碁 35.20 +10.0% · 廣達 339.00 +9.9% · 緯創 158.50 +9.7%\n```\n"
+    },
+    {
+      "id": "burn",
+      "name": "Usage Burn Rate",
+      "version": "0.1.0",
+      "author": "zyx1121",
+      "description": "How fast the 5h usage budget is climbing (%/h), sampled over ≥60s windows per session.",
+      "type": "segment",
+      "runtime": "bash",
+      "hasFetch": false,
+      "network": [],
+      "needsSecrets": false,
+      "requires": {
+        "bin": [
+          "awk"
+        ],
+        "network": [],
+        "macos": [],
+        "env": []
+      },
+      "configSchema": {},
+      "placement": {
+        "slot": "row2",
+        "order": 30
+      },
+      "readme": "# burn\n\n## What it shows\n\n5h 用量預算的**爬升速率**（`%/h`），也就是這個 session 把 5 小時額度燒掉的速度。輸出形如 `burn 12%/h`：`burn` 用 base 灰、數值用 accent 色。只有在算出來的 burn rate `> 0` 時才顯示，額度沒在動（或剛開 session）時整段隱藏。\n\n## Data sources\n\n- `CC_FIVE_PCT` — 5h 視窗的 `used_percentage`（projected stdin，來自 `rate_limits.five_hour`）。\n- `CC_SID` — session id，用來分隔每個 session 各自的取樣狀態。\n- Per-session 狀態檔 `$STATE/burn.$CC_SID`，內容是 `<epoch> <pct> <rate>` 三欄。每次 render 比較「現在的 pct」與「上次取樣的 pct」，除以經過秒數換算成每小時，只在距上次取樣 ≥ 60s 時才更新檔案與重算速率（短於 60s 的 tick 沿用上次算好的 rate，避免雜訊）。負值會夾成 0。\n\n## Config\n\n無。此 segment 不接受任何 config。\n\n## Requires\n\n- `awk`（速率換算）。\n- loader-scope 變數 `$STATE` — per-machine 狀態根目錄（在 git repo 之外，由 loader 設成 `~/.claude/.statusline-state`）。\n\n## Safety notes\n\n- 狀態檔寫在 `$STATE` 底下，**不在** git-synced 的 runtime tree 內；檔名以 `CC_SID` 區隔，session 之間不會互相污染。\n- 只讀 projected stdin 的 `CC_FIVE_PCT` / `CC_SID`，看不到原始 CC JSON。\n- 純算術 + 檔案讀寫，無網路、無外部行程（awk 除外）。\n\n## Example output\n\n```\nburn 12%/h\n```\n"
+    }
+  ],
+  "marketplace": {
+    "name": "statusline",
+    "marketplace": "claude-statusline",
+    "description": "Profile-driven, component-based status line. Compose news/stock tickers, a creatures stage, git/PR/usage segments, and more.",
+    "version": "0.1.0",
+    "owner": "zyx1121"
+  },
+  "contractMd": "# Component IO Contract\n\n本文件定義 statusline host（`runtime/loader.sh` + `runtime/lib/{core,contract}.sh`）與單一\ncomponent 之間的 IO 約定。寫 component 前先讀完這頁 — manifest schema 在\n`component.schema.json` / `profile.schema.json`，這裡講的是 **runtime 行為**。\n\n## 一句話模型\n\n每個 tick，Claude Code 把一段 statusline JSON 從 stdin 餵給 host。host 用一次 `jq` 把它\n**投影**成 `CC_*` 環境變數（這層投影就是安全邊界：component 只看得到投影過的欄位，碰不到\n原始 JSON），依 active profile 的 `(slot, order)` 逐一執行 component，再把各 slot 的輸出\n組成多行字串印回 stdout 給 Claude Code 顯示。\n\ncomponent 有兩種型別：\n\n| | `segment` | `line` |\n|---|---|---|\n| 執行方式 | host **source** `render.sh`，**in-process** 呼叫 `render__<id>` | host **fork** 一個 `runtime` 子行程跑 entry |\n| fork 成本 | 零 | 每次 render 一個行程（用 `render.ttl` 攤平） |\n| 輸出 | 一段**內嵌字串**（透過 `REPLY`） | 一或多**整行**（stdout） |\n| runtime | 必須是 `bash`（host 要 source 它） | 任意（`python3` / `node` / …） |\n| slot | `row1` / `row2`（用 ` · ` 串接成一行） | `top` / `middle` / `bottom`（整行，可多行） |\n| 可否 fetch | 否 | 可（背景刷新） |\n| 隱藏 | 不設 / 設 `REPLY=\"\"` | 印空輸出 |\n\n版面組裝順序（固定）：`top` 行 → 可選 rule → `middle` 行 → `row1` → `row2` → `bottom` 行。\n\n## stdin 投影 → CC_* 環境變數\n\nhost 把 stdin JSON 投影成下列環境變數，**所有** component 都拿得到完整這組。沒有對應資料\n時為空字串。這是 component 唯一看得到的 input —— **不要自己 parse 原始 stdin JSON**，一律走\n`CC_*`。新增欄位只會在這裡加，舊 component 不受影響。\n\n| 環境變數 | 來源 stdin path | 內容 |\n|---|---|---|\n| `CC_MODEL` | `model.display_name` | 模型顯示名 |\n| `CC_CTX_PCT` | `context_window.used_percentage` | context window 使用百分比（純數字，無 `%`） |\n| `CC_FIVE_PCT` | `rate_limits.five_hour.used_percentage` | 5h rate-limit 視窗使用百分比 |\n| `CC_FIVE_RESET` | `rate_limits.five_hour.resets_at` | 5h 視窗 reset 時間 |\n| `CC_WEEK_PCT` | `rate_limits.seven_day.used_percentage` | 7d rate-limit 視窗使用百分比 |\n| `CC_WEEK_RESET` | `rate_limits.seven_day.resets_at` | 7d 視窗 reset 時間 |\n| `CC_COST` | `cost.total_cost_usd` | 本 session 累計花費（USD） |\n| `CC_PR_NUM` | `pr.number` | 目前 branch 的 PR 編號 |\n| `CC_PR_STATE` | `pr.review_state` | 該 PR 的 review 狀態 |\n| `CC_SID` | `session_id`（缺則 `default`） | session id（cache key 用） |\n| `CC_PROJECT_DIR` | `workspace.project_dir` ‖ `workspace.current_dir` ‖ `cwd` | 工作目錄 |\n\n> manifest 的 `inputs` 與 `capabilities.stdin_fields` 用**原始 dotted stdin path**\n> （如 `context_window.used_percentage`）宣告依賴，供審查/最小權限用；render 時實際讀的是\n> 上表對應的 `CC_*` 環境變數。\n\n## segment 約定\n\n`render.sh` 定義一個函式 `render__<id>`，host source 後 in-process 呼叫：\n\n```bash\n#!/usr/bin/env bash\n# <id> — segment; reads CC_*, returns via $REPLY.\nrender__<id>() {            # $1 = config JSON (此 instance 的 config，已補 default)\n  [ -n \"$CC_CTX_PCT\" ] || return 0          # 沒料 → 不設 REPLY，視為隱藏\n  local i col\n  printf -v i '%.0f' \"$CC_CTX_PCT\"\n  col=$(pct_color \"$i\")                       # core.sh helper：≥80% 轉紅\n  printf -v REPLY \"${KEY}ctx${RESET} ${col}%d%%${RESET}\" \"$i\"\n}\n```\n\n規則：\n\n- **input**：`CC_*` 環境變數 + `$1` = 此 instance 的 config JSON 字串（profile 的 `config`\n  以 compact JSON 傳入；空 config 為 `{}`）。用 `jq` 取值，例：`jq -r '.window // \"5h\"'`。\n- **output**：把要顯示的內嵌字串 `printf -v REPLY ...` 寫進 `REPLY`（用真 ESC，不是字面\n  `\\033`）。不設 `REPLY` 或 `REPLY=\"\"` = 隱藏（不佔位、不出現 ` · ` 分隔符）。\n- **不要 `echo` / `printf` 到 stdout** — segment 是 in-process，任何 stdout 都會污染整行。\n- 函式名必須是 `render__<id>`，`<id>` 等於 `component.json` 的 `id`。\n- runtime 固定 `bash`。可用 `lib/core.sh` 提供的共用名（**保持穩定**）：\n  `KEY` / `VAL` / `RESET` 等調色盤、`pct_color <pct>`（≥80% 紅）、`fmt_countdown <epoch>`\n  （`1h20m` / `42m` / `now`）、`join_sep`。\n- 退出以 `return 0` 為準。\n\n同一 slot（`row1` / `row2`）內所有非空 segment 依 `order` 由小到大、以 ` · ` 串接成一行。\n\n## line 約定\n\nline component 是被 fork 的獨立程式。host 以固定 argv 呼叫 `render.entry`：\n\n```\n<runtime> <render.entry> <cols> --session <sid> [--<k> <v> ...]\n```\n\n- `<cols>`：終端寬度（整數），第一個位置參數，自行 wrap / truncate（注意 CJK 寬度）。\n- `--session <sid>`：等於 `CC_SID`，拿來當每-session cache / scroll-offset 的 key。\n- `--<k> <v>`：此 instance config 中的**純量** key 攤平成 flag；**陣列 / 物件不會傳**\n  （讀不到，改用 `config.file` 打包的預設檔，見下）。\n- 同樣讀得到 `CC_*` 環境變數。\n\n輸出：把要顯示的內容印到 **stdout**，可多行（每行就是 statusline 的一行，如 creatures 場景）。\n印空 = 隱藏。stderr 不顯示，可拿來 debug。退出碼非 0 視為失敗，該 line 略過。\n\n### render.ttl\n\n`render.ttl`（預設 `1`）控制 fork 頻率：\n\n- `1`：每 tick 都 fork 一次 render（捲動最滑順）。\n- `>1`：N 秒內重用上次 render 的 stdout、不再 fork。適合輸出變動慢但 render 不便宜的 widget。\n  cache 由 host 管理（路徑 `${STATUSLINE_STATE}/.render.<sid>`）。\n\n### fetch（選用，背景刷新）\n\n需要打網路或跑慢任務的 line component，把「取數」跟「畫面」分開：\n\n- render **永不碰網路**，只讀自己寫的 cache、立即回畫面。\n- 取數走背景、detached、**永不阻塞 tick**：cache 超過 `fetch.ttl`（預設 300s）時刷新。\n  目前 widget 自管刷新（`fetch.self_managed: true`）— render 偵測 cache 過期就自己\n  `subprocess.Popen([..., \"--fetch\"], start_new_session=True)`。`fetch.entry` 常與\n  `render.entry` 同檔，用 `fetch.args`（如 `[\"--fetch\"]`）切模式。\n- fetch 把結果**原子寫**（寫 `.tmp` 再 `os.replace`）進 cache 檔，render 只讀。網路目標\n  須列在 `requires.network` / `capabilities.network`。\n\n## State / config / 目錄\n\nruntime（loader / lib / components）住在 git 同步的樹裡；**state / cache 一律在 repo 外**。\nhost fork line component 時注入兩個環境變數：\n\n| 注入環境變數 | 指向 | 用途 |\n|---|---|---|\n| `STATUSLINE_STATE` | `~/.claude/.statusline-state/<id>/`（host `mkdir -p`） | 此 component 的 cache / per-session offset / fetch 輸出。**只寫這裡。** |\n| `STATUSLINE_CONFIG` | component 自己的目錄（repo 內） | 讀打包的預設檔（`config.file`，如 `symbols.default` / `topics.default`） |\n\n- cache 檔自取名，建議含 sid 避免 session 互踩（如 `.<id>.<sid>.state.json`）。fetch\n  process 同樣讀 `STATUSLINE_STATE` 找路徑，不要自己另開目錄。\n- segment 不吃這兩個環境變數（in-process）；需要慢源資料時讀 loader-scope 的共用 cache\n  變數（如 pve 的 `$pve_run` / `$pve_total`，由 B-class refresher 注入）。\n\n### component 解析順序（兩層 search path）\n\n1. **user layer**：`~/.claude/statusline/components/<id>/`（個人 + `install` 進來的）— **優先**。\n2. **plugin layer**：`${STATUSLINE_PLUGIN_ROOT}/components/<id>/`（shim 解析出的最新 plugin 版）。\n\nuser layer 同 id 會整個覆蓋 plugin 內建版，便於本機改寫不動 plugin。\n\n## Config 與 schema\n\n- `component.json` 的 `config.schema` 宣告每個 knob 的 `type`（或 `enum`）/ `default` / `desc`。\n- profile 的 `components[].config` 提供覆寫值；缺的 key 由 schema default 補齊後才交給 component。\n- segment 收到序列化後的完整 config JSON 作 `$1`；line 收到攤平後的純量 `--<k> <v>` flags\n  （陣列 / 物件 config 走 `config.file` 打包的預設檔）。\n\n## 速查清單（寫新 component）\n\n1. 建 `~/.claude/statusline/components/<id>/`（或 plugin `components/<id>/`），目錄名 = `id`。\n2. 寫 `component.json`，過 `component.schema.json`：`$schema` / `id` / `name` / `version` /\n   `type` / `runtime` / `render` 必填；附 `README.md`（給 Claude 審查）。\n3. segment → `render.sh` 定義 `render__<id>`，只設 `REPLY`，讀 `CC_*` + `$1`，不印 stdout。\n   line → render 腳本讀 `<cols> --session <sid> [--k v]`、印 stdout；要網路時加 `fetch` +\n   原子寫 cache 到 `STATUSLINE_STATE`，並在 `requires`/`capabilities` 宣告 network / fs_write。\n4. 在 profile 的 `components[]` 引用（可指定 `slot` / `order` / `config`）。\n5. 同 id 可多次出現，用 `order` + `config` 區分（如 ratelimit 的 5h / 7d）。\n"
+}

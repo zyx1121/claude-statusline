@@ -77,6 +77,29 @@ const MARKETPLACE_PATH = path.join(
   ".claude-plugin",
   "marketplace.json",
 );
+// Committed snapshot (web/lib/registry.generated.json) — produced by
+// scripts/snapshot.mjs from plugin/components. Lets the site build self-contained
+// on Vercel (deployed from web/, where ../plugin isn't uploaded). When the sibling
+// ../plugin IS present (local dev), we read it live so edits show without a re-snapshot.
+const SNAPSHOT_PATH = path.join(process.cwd(), "lib", "registry.generated.json");
+
+interface Snapshot {
+  components: Component[];
+  marketplace: MarketplaceMeta;
+  contractMd: string;
+}
+
+function loadSnapshot(): Snapshot | null {
+  return readJson<Snapshot>(SNAPSHOT_PATH);
+}
+
+const haveLivePlugin = (): boolean => {
+  try {
+    return fs.existsSync(COMPONENTS_DIR);
+  } catch {
+    return false;
+  }
+};
 
 function readJson<T>(file: string): T | null {
   try {
@@ -197,22 +220,24 @@ let cache: Component[] | null = null;
 export function getComponents(): Component[] {
   if (cache) return cache;
 
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(COMPONENTS_DIR, { withFileTypes: true });
-  } catch {
-    cache = [];
-    return cache;
+  // Live plugin dir (local dev) wins so edits show without re-snapshotting.
+  if (haveLivePlugin()) {
+    try {
+      cache = fs
+        .readdirSync(COMPONENTS_DIR, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => readComponent(e.name))
+        .filter((c): c is Component => c !== null)
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, "en", { sensitivity: "base" }),
+        );
+      return cache;
+    } catch {
+      /* fall through to snapshot */
+    }
   }
 
-  cache = entries
-    .filter((e) => e.isDirectory())
-    .map((e) => readComponent(e.name))
-    .filter((c): c is Component => c !== null)
-    .sort((a, b) =>
-      a.name.localeCompare(b.name, "en", { sensitivity: "base" }),
-    );
-
+  cache = loadSnapshot()?.components ?? [];
   return cache;
 }
 
@@ -220,7 +245,30 @@ export function getComponent(id: string): Component | null {
   return getComponents().find((c) => c.id === id) ?? null;
 }
 
+/** The render/fetch authoring contract (plugin/spec/CONTRACT.md), for the /spec page. */
+export function getContract(): string {
+  if (haveLivePlugin()) {
+    const live = path.join(
+      process.cwd(),
+      "..",
+      "plugin",
+      "spec",
+      "CONTRACT.md",
+    );
+    try {
+      return fs.readFileSync(live, "utf8");
+    } catch {
+      /* fall through */
+    }
+  }
+  return loadSnapshot()?.contractMd ?? "";
+}
+
 export function getMarketplaceMeta(): MarketplaceMeta {
+  if (!haveLivePlugin()) {
+    const snap = loadSnapshot();
+    if (snap?.marketplace) return snap.marketplace;
+  }
   const raw = readJson<Record<string, unknown>>(MARKETPLACE_PATH) ?? {};
   const meta = asObject(raw.metadata);
   const ownerObj = asObject(raw.owner);
