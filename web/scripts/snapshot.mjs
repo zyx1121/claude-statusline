@@ -22,6 +22,9 @@ if (!fs.existsSync(COMPONENTS_DIR)) {
 
 const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return null; } };
 const readText = (f) => { try { return fs.readFileSync(f, "utf8"); } catch { return ""; } };
+const readFrames = (f) => { try { const a = JSON.parse(fs.readFileSync(f, "utf8")); return Array.isArray(a) ? a : []; } catch { return []; } };
+// Block Elements + Legacy-Computing (incl. octants U+1CD00–1CEBF) → mosaic widget.
+const MOSAIC_RE = /[▀-▟]|[\u{1FB00}-\u{1FBFF}]|[\u{1CC00}-\u{1CEBF}]/u;
 const asStr = (v, d = "") => (typeof v === "string" ? v : d);
 const asArr = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
 const asObj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
@@ -65,6 +68,8 @@ function readComponent(dir) {
     placement: asObj(m.placement),
     readme: readText(path.join(cd, "README.md")),
     preview: readText(path.join(cd, "preview.txt")),
+    frames: readFrames(path.join(cd, "frames.json")),
+    mosaic: MOSAIC_RE.test(readText(path.join(cd, "preview.txt"))),
   };
 }
 
@@ -79,6 +84,9 @@ const out = {
   sources: reg.sources ?? [builtin],
   components,
   contractMd: readText(CONTRACT),
+  // 256-entry octant table (index = 8-bit 2×4 pattern → glyph). The web inverts
+  // it to decode mosaic frames into real coloured pixels.
+  octants: readText(path.join(COMPONENTS_DIR, "creatures", "assets", "octant.txt")).replace(/\n$/, ""),
 };
 fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + "\n");
 const withPreview = components.filter((c) => c.preview.trim()).length;

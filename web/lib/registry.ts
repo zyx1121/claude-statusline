@@ -51,6 +51,10 @@ export interface Component {
   placement: { slot?: string; order?: number };
   readme: string;
   preview: string;
+  /** Animation frames (line widgets) — cycled ~1/s in the UI; absent for static parts. */
+  frames?: string[];
+  /** Uses octant/block glyphs → render via the pixel decoder, not as text. */
+  mosaic?: boolean;
 }
 
 export interface Source {
@@ -306,6 +310,11 @@ export function snapshotIds(): string[] {
 /** The render/fetch authoring contract (CONTRACT.md), for the /spec page. */
 export function getContract(): string {
   return asStr((snapshot as { contractMd?: string }).contractMd);
+}
+
+/** The 256-entry octant table — the pixel decoder inverts it to draw mosaic frames. */
+export function getOctants(): string {
+  return asStr((snapshot as { octants?: string }).octants);
 }
 
 export function getMarketplaceMeta() {
