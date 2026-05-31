@@ -1,0 +1,21 @@
+$ next build
+▲ Next.js 16.2.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.6s
+  Running TypeScript ...
+Failed to type check.
+
+./app/c/[id]/page.tsx:9:8
+Type error: Module '"@/lib/components"' has no exported member 'StatuslineComponent'.
+
+   7 |   getComponent,
+   8 |   getComponents,
+>  9 |   type StatuslineComponent,
+     |        ^
+  10 | } from "@/lib/components";
+  11 | import { cn } from "@/lib/utils";
+  12 | import { Badge } from "@/components/ui/badge";
+Next.js build worker exited with code: 1 and signal: null
+error: script "build" exited with code 1
+EXIT=1
