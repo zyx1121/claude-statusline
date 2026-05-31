@@ -63,10 +63,16 @@ function parseCells(input: string): Cell[][] {
       i = m.index + m[0].length;
       continue;
     }
-    const ch = input[i];
+    // Octant/legacy-computing glyphs are astral-plane (surrogate pairs); read a
+    // whole code point so a Cell holds the full glyph, matching the inversion
+    // table (keyed by code points). Indexing by UTF-16 unit would split each
+    // octant into two lone surrogates that miss the table and drop the cell.
+    const cp = input.codePointAt(i);
+    if (cp === undefined) break;
+    const ch = String.fromCodePoint(cp);
     if (ch === "\n") { rows.push(row); row = []; }
     else { row.push({ ch, fg, bg }); }
-    i++;
+    i += ch.length;
   }
   if (row.length) rows.push(row);
   return rows;
