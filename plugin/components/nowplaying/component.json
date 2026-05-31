@@ -1,0 +1,16 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "nowplaying",
+  "name": "Now Playing",
+  "version": "0.1.0",
+  "author": { "github": "zyx1121" },
+  "description": "Currently-playing track (name — artist) from Apple Music or Spotify, truncated to 44 chars.",
+  "type": "segment",
+  "runtime": "bash",
+  "render": { "entry": "render.sh" },
+  "inputs": [],
+  "requires": { "macos": ["AppleEvents"] },
+  "config": {},
+  "placement": { "slot": "row2", "order": 40 },
+  "capabilities": { "stdin_fields": [] }
+}

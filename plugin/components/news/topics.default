@@ -1,0 +1,8 @@
+# News-ticker topics (zh-TW Google News). One per line.
+#   top  = Google News top stories (headline mix)
+#   else = a search keyword (e.g. 台積電 / NBA / 財經) → that day's matching news
+# Edit freely; the ticker refetches within the hour when this changes.
+top
+國際
+科技
+AI

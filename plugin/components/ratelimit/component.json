@@ -1,0 +1,20 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "ratelimit",
+  "name": "Rate Limit",
+  "version": "0.1.0",
+  "author": { "github": "zyx1121" },
+  "description": "Claude usage-limit % + reset countdown for a window (5h or 7d). Multi-instance via config.window.",
+  "type": "segment",
+  "runtime": "bash",
+  "render": { "entry": "render.sh" },
+  "inputs": ["rate_limits"],
+  "requires": {},
+  "config": {
+    "schema": {
+      "window": { "enum": ["5h", "7d"], "default": "5h", "desc": "Which rate-limit window to show." }
+    }
+  },
+  "placement": { "slot": "row1", "order": 30 },
+  "capabilities": { "stdin_fields": ["rate_limits.five_hour", "rate_limits.seven_day"] }
+}

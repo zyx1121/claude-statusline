@@ -1,0 +1,12 @@
+# runtime artifacts — never committed
+__pycache__/
+*.pyc
+.render.*
+*.tmp.*
+.statusline-*.cache.json
+.statusline-*.lock
+
+# web (Phase 3)
+web/node_modules/
+web/.next/
+web/out/

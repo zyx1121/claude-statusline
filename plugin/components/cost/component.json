@@ -1,0 +1,16 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "cost",
+  "name": "Session Cost",
+  "version": "0.1.0",
+  "author": { "github": "zyx1121" },
+  "description": "Session cost in USD, shown once it climbs above zero.",
+  "type": "segment",
+  "runtime": "bash",
+  "render": { "entry": "render.sh" },
+  "inputs": ["cost.total_cost_usd"],
+  "requires": {},
+  "config": {},
+  "placement": { "slot": "row1", "order": 40 },
+  "capabilities": { "stdin_fields": ["cost.total_cost_usd"] }
+}

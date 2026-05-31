@@ -1,0 +1,13 @@
+{
+  "$schema": "statusline/profile@1",
+  "name": "minimal",
+  "description": "Just the essentials on one row: model, context, the 5h limit, cost, and git.",
+  "rule": false,
+  "components": [
+    { "id": "model",     "slot": "row1", "order": 10 },
+    { "id": "ctx",       "slot": "row1", "order": 20 },
+    { "id": "ratelimit", "slot": "row1", "order": 30, "config": { "window": "5h" } },
+    { "id": "cost",      "slot": "row1", "order": 40 },
+    { "id": "git",       "slot": "row2", "order": 10 }
+  ]
+}

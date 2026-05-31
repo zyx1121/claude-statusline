@@ -1,0 +1,16 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "ctx",
+  "name": "Context Usage",
+  "version": "0.1.0",
+  "author": { "github": "zyx1121" },
+  "description": "Context-window usage percentage, turning red at ≥80%.",
+  "type": "segment",
+  "runtime": "bash",
+  "render": { "entry": "render.sh" },
+  "inputs": ["context_window.used_percentage"],
+  "requires": {},
+  "config": {},
+  "placement": { "slot": "row1", "order": 20 },
+  "capabilities": { "stdin_fields": ["context_window.used_percentage"] }
+}

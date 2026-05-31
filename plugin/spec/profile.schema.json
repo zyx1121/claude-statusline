@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zyx1121/claude-statusline/spec/profile.schema.json",
+  "title": "Statusline Profile",
+  "description": "A profile is the template unit: a named composition that selects components, places them into slots, and orders them. The host renders the profile resolved by STATUSLINE_PROFILE / the user default / the bundled example.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "name", "components"],
+  "properties": {
+    "$schema": {
+      "description": "Manifest format tag identifying the profile format version.",
+      "const": "statusline/profile@1"
+    },
+    "name": {
+      "type": "string",
+      "description": "Profile identifier (matches the file stem, e.g. full / minimal).",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line summary of what the profile shows."
+    },
+    "rule": {
+      "type": "boolean",
+      "description": "Whether the host draws its thin divider rule between the top and middle slots when this profile is active.",
+      "default": false
+    },
+    "side_effects": {
+      "type": "array",
+      "description": "Names of non-visual side-effect scripts to run (detached) when this profile is active. Resolved user-layer-first, then plugin built-ins, as <name>.sh. Empty for pure display profiles.",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "components": {
+      "type": "array",
+      "description": "Component instances to render. The same id may appear multiple times (distinguished by order + config), e.g. ratelimit for the 5h and 7d windows.",
+      "items": { "$ref": "#/$defs/instance" }
+    }
+  },
+  "$defs": {
+    "instance": {
+      "type": "object",
+      "description": "One placed component instance. id resolves user-layer-first (~/.claude/statusline/components/<id>), then plugin built-ins.",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Component id to resolve and render.",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "slot": {
+          "type": "string",
+          "description": "Slot to place into; overrides the component's placement.slot. top/middle/bottom = line widgets; row1/row2 = segments joined with ' · '.",
+          "enum": ["top", "rule", "middle", "bottom", "row1", "row2"]
+        },
+        "order": {
+          "type": "integer",
+          "description": "Sort key within the slot (lower first); overrides placement.order.",
+          "minimum": 0
+        },
+        "config": {
+          "type": "object",
+          "description": "Per-instance config passed to the component. Keys must match the component's config.schema; omitted keys fall back to schema defaults.",
+          "default": {}
+        }
+      }
+    }
+  }
+}

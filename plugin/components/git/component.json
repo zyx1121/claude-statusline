@@ -1,0 +1,16 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "git",
+  "name": "Git State",
+  "version": "0.1.0",
+  "author": { "github": "zyx1121" },
+  "description": "Repo state for the workspace: (branch) plus dirty <elapsed> / ahead <N> / commits <N> when present.",
+  "type": "segment",
+  "runtime": "bash",
+  "render": { "entry": "render.sh" },
+  "inputs": ["workspace.project_dir"],
+  "requires": { "bin": ["git"] },
+  "config": {},
+  "placement": { "slot": "row2", "order": 10 },
+  "capabilities": { "exec": true, "stdin_fields": ["workspace.project_dir"] }
+}

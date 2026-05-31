@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zyx1121/claude-statusline/spec/component.schema.json",
+  "title": "Statusline Component",
+  "description": "Schema for a component.json manifest. A component is a directory (dir name == id) the loader places into a profile slot. type=segment runs IN-PROCESS (host sources render.sh and calls render__<id>, zero fork); type=line is FORKED as a standalone runtime process and may print multiple whole lines. Host + Claude both read this manifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "id", "name", "version", "type", "runtime", "render"],
+  "properties": {
+    "$schema": {
+      "description": "Manifest format tag. Distinct from JSON-Schema $schema; identifies the component manifest version the host understands.",
+      "const": "statusline/component@1"
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable slug, unique in the registry. Equals the component dir name and, for segments, the render function suffix render__<id>.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable display name.",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (MAJOR.MINOR.PATCH, optional pre-release / build). Bump on every code change (CI-enforced).",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "author": {
+      "type": "object",
+      "description": "Component author identity.",
+      "properties": {
+        "github": {
+          "type": "string",
+          "description": "Author's GitHub handle."
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line summary for Claude to scan the catalog."
+    },
+    "type": {
+      "type": "string",
+      "description": "segment = inline fragment, in-process bash, zero fork, returns one string via REPLY. line = standalone script, forked, prints one or more whole lines.",
+      "enum": ["segment", "line"]
+    },
+    "runtime": {
+      "type": "string",
+      "description": "Interpreter for the render/fetch entry. Segments must be bash (the host sources them). Lines may use any interpreter.",
+      "examples": ["bash", "python3", "node"]
+    },
+    "render": {
+      "type": "object",
+      "description": "How to produce the component's output every tick.",
+      "additionalProperties": false,
+      "required": ["entry"],
+      "properties": {
+        "entry": {
+          "type": "string",
+          "description": "Entry file relative to the component dir. Segment: render.sh defining render__<id>(). Line: a script the runtime executes."
+        },
+        "ttl": {
+          "type": "integer",
+          "description": "Seconds the host may reuse cached line output before re-forking. 1 = fork every tick (smoothest). >1 = reuse cached output for N seconds. Lines only; segments are always in-process every tick.",
+          "minimum": 1,
+          "default": 1
+        }
+      }
+    },
+    "fetch": {
+      "description": "Optional background data refresh for line components. Runs detached on its own ttl and atomically writes its own cache; render only reads that cache and never blocks the tick. null = no background fetch.",
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["entry"],
+      "properties": {
+        "entry": {
+          "type": "string",
+          "description": "Entry file relative to the component dir. Often the same file as render.entry, switched by an arg in args."
+        },
+        "args": {
+          "type": "array",
+          "description": "Extra args appended after the standard invocation to select fetch mode (e.g. [\"--fetch\"]).",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "ttl": {
+          "type": "integer",
+          "description": "Re-fetch once the cache is older than this many seconds.",
+          "minimum": 1,
+          "default": 300
+        },
+        "self_managed": {
+          "type": "boolean",
+          "description": "true = the component spawns its own detached --fetch from inside render (current widgets do this). false/absent = host schedules the fetch.",
+          "default": false
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Dotted stdin-JSON paths the component depends on (e.g. context_window.used_percentage, session_id). Declares dependencies for visibility; the host projects these into CC_* env (see CONTRACT.md).",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "requires": {
+      "type": "object",
+      "description": "Host prerequisites. If unmet the host skips the component.",
+      "additionalProperties": false,
+      "properties": {
+        "bin": {
+          "type": "array",
+          "description": "Executables that must be on PATH.",
+          "items": { "type": "string" }
+        },
+        "network": {
+          "type": "array",
+          "description": "Hosts the component connects to. Non-empty implies network access is needed.",
+          "items": { "type": "string" }
+        },
+        "macos": {
+          "type": "array",
+          "description": "macOS-only capabilities required (e.g. AppleEvents). Non-empty implies macOS-only.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Per-instance config surface. schema declares the knobs a profile may set under components[].config; defaults apply when a profile omits a key.",
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "type": "object",
+          "description": "Map of config key -> knob spec.",
+          "additionalProperties": { "$ref": "#/$defs/configKnob" }
+        },
+        "file": {
+          "type": "string",
+          "description": "Default config file packaged in the component dir (e.g. symbols.default), used for list-valued config the loader cannot pass as flags."
+        }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "description": "Default slot/order used when a profile lists the component without overriding them.",
+      "additionalProperties": false,
+      "properties": {
+        "slot": { "$ref": "#/$defs/slot" },
+        "order": { "$ref": "#/$defs/order" }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Declared effects, for review and least-privilege auditing.",
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "type": "array",
+          "description": "Hosts the component is allowed to reach. Empty = no network.",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "exec": {
+          "type": "boolean",
+          "description": "Spawns external processes.",
+          "default": false
+        },
+        "fs_write": {
+          "type": "array",
+          "description": "Filesystem locations the component may write (e.g. $STATE_DIR for its fetch cache). Empty = no writes.",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "stdin_fields": {
+          "type": "array",
+          "description": "Dotted stdin-JSON paths the component actually consumes (the projection allow-list).",
+          "items": { "type": "string" },
+          "default": []
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "const": "segment" } },
+        "required": ["type"]
+      },
+      "then": {
+        "description": "Segments run in-process and cannot fork or fetch.",
+        "properties": { "fetch": { "type": "null" } }
+      }
+    }
+  ],
+  "$defs": {
+    "slot": {
+      "type": "string",
+      "description": "Where the component renders. top/middle/bottom = line widgets (arbitrary lines). row1/row2 = segments joined with ' · '. rule = the host-drawn divider position.",
+      "enum": ["top", "rule", "middle", "bottom", "row1", "row2"]
+    },
+    "order": {
+      "type": "integer",
+      "description": "Sort key within a slot; lower renders first.",
+      "minimum": 0
+    },
+    "configKnob": {
+      "type": "object",
+      "description": "One user-tunable config key: its type (or enum), default, and a human description.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "JSON type of the value.",
+          "enum": ["string", "number", "boolean", "array", "object"]
+        },
+        "enum": {
+          "type": "array",
+          "description": "Allowed values (in place of, or alongside, type).",
+          "minItems": 1
+        },
+        "default": {
+          "description": "Default value when the profile omits this key."
+        },
+        "desc": {
+          "type": "string",
+          "description": "Human-readable explanation of the knob."
+        }
+      },
+      "anyOf": [
+        { "required": ["type"] },
+        { "required": ["enum"] }
+      ]
+    }
+  }
+}

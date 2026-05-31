@@ -1,0 +1,10 @@
+# Taiwan stock ticker — one symbol per line, scrolled left-to-right below the status bar.
+#   t00        = TAIEX weighted index (shown as "TWII", carries the sparkline)
+#   4-digit    = TSE-listed stock by code (e.g. 0050, 2330)
+#   otc:<code> = OTC / TPEx-listed stock
+# Lines starting with # are ignored. Edit freely; the ticker picks it up on next fetch.
+t00
+0050
+2353
+2382
+3231

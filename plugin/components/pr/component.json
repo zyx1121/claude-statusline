@@ -1,0 +1,16 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "pr",
+  "name": "Pull Request",
+  "version": "0.1.0",
+  "author": { "github": "zyx1121" },
+  "description": "PR number for the current branch with a colour-coded review-state icon (absent until a PR exists).",
+  "type": "segment",
+  "runtime": "bash",
+  "render": { "entry": "render.sh" },
+  "inputs": ["pr.number", "pr.review_state"],
+  "requires": {},
+  "config": {},
+  "placement": { "slot": "row2", "order": 20 },
+  "capabilities": { "stdin_fields": ["pr.number", "pr.review_state"] }
+}

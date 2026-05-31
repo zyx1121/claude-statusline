@@ -1,0 +1,20 @@
+{
+  "name": "claude-statusline",
+  "owner": { "name": "zyx1121", "url": "https://github.com/zyx1121" },
+  "metadata": {
+    "description": "A Claude-native, modular status line and its component marketplace.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "statusline",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/zyx1121/claude-statusline.git",
+        "path": "plugin"
+      },
+      "description": "Profile-driven, component-based status line. Compose news/stock tickers, a creatures stage, git/PR/usage segments, and more.",
+      "category": "statusline"
+    }
+  ]
+}

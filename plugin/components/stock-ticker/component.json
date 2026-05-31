@@ -1,0 +1,31 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "stock-ticker",
+  "name": "Stock Ticker",
+  "version": "0.1.0",
+  "author": { "github": "zyx1121" },
+  "description": "Left-scrolling Taiwan stock ticker (TWSE quotes, keyless).",
+  "type": "line",
+  "runtime": "python3",
+  "render": { "entry": "render.py", "ttl": 1 },
+  "fetch": { "entry": "render.py", "args": ["--fetch"], "ttl": 60, "self_managed": true },
+  "inputs": ["session_id"],
+  "requires": { "bin": ["python3"], "network": ["mis.twse.com.tw"] },
+  "config": {
+    "schema": {
+      "symbols": {
+        "type": "array",
+        "default": ["t00", "0050", "2353", "2382", "3231"],
+        "desc": "TWSE symbols. t00=TAIEX index, 4-digit=TSE code, otc:<code>=TPEx."
+      }
+    },
+    "file": "symbols.default"
+  },
+  "placement": { "slot": "bottom", "order": 10 },
+  "capabilities": {
+    "network": ["mis.twse.com.tw"],
+    "exec": false,
+    "fs_write": ["$STATE_DIR"],
+    "stdin_fields": []
+  }
+}
