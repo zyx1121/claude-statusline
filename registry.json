@@ -1,0 +1,15 @@
+{
+  "$schema": "./plugin/spec/registry.schema.json",
+  "version": "1",
+  "description": "Federated registry of statusline components. Each source is a GitHub repo (+ path) holding one or more components/<id>/. Submit yours via PR — see CONTRIBUTING.",
+  "sources": [
+    {
+      "repo": "zyx1121/claude-statusline",
+      "ref": "main",
+      "path": "plugin/components",
+      "author": "zyx1121",
+      "official": true,
+      "description": "The built-in components that ship with the statusline plugin."
+    }
+  ]
+}

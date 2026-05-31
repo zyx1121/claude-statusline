@@ -1,0 +1,74 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "plugin/components/**"
+      - "plugin/spec/**"
+      - "registry.json"
+      - ".github/workflows/validate.yml"
+  pull_request:
+    paths:
+      - "plugin/components/**"
+      - "plugin/spec/**"
+      - "registry.json"
+      - ".github/workflows/validate.yml"
+
+jobs:
+  builtins:
+    name: built-in components
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet jsonschema
+      - name: Validate plugin/components against the spec
+        run: python3 plugin/spec/validate.py plugin/components
+
+  registry:
+    name: registry sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet jsonschema
+      - name: Validate registry.json shape
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          try:
+              import jsonschema
+          except ImportError:
+              jsonschema = None
+          reg = json.load(open("registry.json"))
+          if jsonschema:
+              schema = json.load(open("plugin/spec/registry.schema.json"))
+              jsonschema.Draft202012Validator(schema).validate(reg)
+          print(f"registry.json OK — {len(reg['sources'])} source(s)")
+          PY
+      - name: Clone each source and validate its components
+        run: |
+          set -euo pipefail
+          fail=0
+          # iterate sources: repo \t ref \t path
+          jq -r '.sources[] | "\(.repo)\t\(.ref // "main")\t\(.path)"' registry.json |
+          while IFS=$'\t' read -r repo ref path; do
+            echo "::group::source $repo@$ref :$path"
+            if [ "$repo" = "${GITHUB_REPOSITORY:-}" ]; then
+              # the official built-ins are this very checkout — validate in place
+              dir="$path"
+            else
+              tmp="$(mktemp -d)"
+              git clone --quiet --depth 1 --branch "$ref" "https://github.com/$repo.git" "$tmp" \
+                || git clone --quiet --depth 1 "https://github.com/$repo.git" "$tmp"
+              dir="$tmp/$path"
+            fi
+            python3 plugin/spec/validate.py "$dir" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail

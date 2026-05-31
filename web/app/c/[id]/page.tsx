@@ -5,10 +5,11 @@ import Markdown from "react-markdown";
 
 import {
   getComponent,
-  getComponents,
+  snapshotIds,
   type Component,
   type ComponentRequires,
-} from "@/lib/components";
+} from "@/lib/registry";
+import { Preview } from "@/components/ansi";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,11 +30,13 @@ import {
 } from "@/components/ui/table";
 import { CopyButton } from "@/components/copy-button";
 
-export const dynamic = "error";
-export const dynamicParams = false;
+// Built-ins are pre-rendered from the snapshot; federated components (added to the
+// registry by PR) render on-demand and are revalidated.
+export const dynamicParams = true;
+export const revalidate = 600;
 
 export function generateStaticParams() {
-  return getComponents().map((c) => ({ id: c.id }));
+  return snapshotIds().map((id) => ({ id }));
 }
 
 export async function generateMetadata({
@@ -42,7 +45,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const component = getComponent(id);
+  const component = await getComponent(id);
   if (!component) return { title: "Not found — claude-statusline" };
   return {
     title: `${component.name} — claude-statusline`,
@@ -56,7 +59,7 @@ export default async function ComponentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const component = getComponent(id);
+  const component = await getComponent(id);
   if (!component) notFound();
 
   const install = `/statusline:install ${component.id}`;
@@ -117,6 +120,13 @@ export default async function ComponentPage({
           </p>
         ) : null}
       </header>
+
+      {/* Preview — what it actually looks like */}
+      {component.preview.trim() ? (
+        <section className="mt-8">
+          <Preview ansi={component.preview} className="text-xs" />
+        </section>
+      ) : null}
 
       {/* Install */}
       <section className="mt-8">

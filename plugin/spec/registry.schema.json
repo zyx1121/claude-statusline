@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude-statusline.vercel.app/schema/registry.json",
+  "title": "Statusline component registry",
+  "description": "A federated index of component sources. Each source is a GitHub repo + path holding one or more components/<id>/ directories.",
+  "type": "object",
+  "required": ["version", "sources"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string", "const": "1" },
+    "description": { "type": "string" },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["repo", "path", "author"],
+        "additionalProperties": false,
+        "properties": {
+          "repo": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+            "description": "GitHub repo, owner/name."
+          },
+          "ref": {
+            "type": "string",
+            "default": "main",
+            "description": "Git ref (branch/tag/sha) to read components from."
+          },
+          "path": {
+            "type": "string",
+            "description": "Directory in the repo holding the component subdirs, e.g. components or plugin/components."
+          },
+          "author": {
+            "type": "string",
+            "description": "GitHub handle credited for the components in this source."
+          },
+          "official": {
+            "type": "boolean",
+            "default": false,
+            "description": "True only for sources maintained by the marketplace owner."
+          },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}

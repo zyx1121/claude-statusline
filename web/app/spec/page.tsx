@@ -4,7 +4,7 @@ import Markdown, { type Components } from "react-markdown";
 import { FileJson, FileText, Terminal, GitPullRequest } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getContract } from "@/lib/components";
+import { getContract } from "@/lib/registry";
 
 export const metadata: Metadata = {
   title: "Writing a component · claude-statusline",
