@@ -1,11 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { Metadata } from "next";
 import type { ComponentProps } from "react";
 import Markdown, { type Components } from "react-markdown";
 import { FileJson, FileText, Terminal, GitPullRequest } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getContract } from "@/lib/components";
 
 export const metadata: Metadata = {
   title: "Writing a component · claude-statusline",
@@ -20,16 +19,10 @@ const COMPONENT_SCHEMA_URL =
 const PROFILE_SCHEMA_URL =
   "https://github.com/zyx1121/claude-statusline/blob/main/plugin/spec/profile.schema.json";
 
-// Read the contract at build time. cwd is web/, so the repo root is one level up.
+// Read the contract at build time — live from ../plugin when present (dev), else
+// from the committed snapshot (Vercel, where ../plugin isn't uploaded).
 function readContract(): string {
-  const contractPath = path.join(
-    process.cwd(),
-    "..",
-    "plugin",
-    "spec",
-    "CONTRACT.md",
-  );
-  return fs.readFileSync(contractPath, "utf8");
+  return getContract();
 }
 
 const DIR_SHAPE = `plugin/components/<id>/
