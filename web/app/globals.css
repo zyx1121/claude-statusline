@@ -1,17 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* GNU Unifont (subset) — covers the Symbols for Legacy Computing blocks the
-   creatures sprites use (octants U+1CD00–1CEBF, sextants U+1FB00+). unicode-range
-   scopes it to exactly those glyphs, so every other char in a preview still
-   renders in Geist Mono; the browser only fetches this when such a glyph appears. */
-@font-face {
-  font-family: "LegacyComputing";
-  src: url("/fonts/unifont-legacy.woff") format("woff");
-  font-display: swap;
-  unicode-range: U+2580-259F, U+1FB00-1FBFF, U+1CC00-1CEBF;
-}
-
 @custom-variant dark (&:is(.dark *));
 
 :root {
