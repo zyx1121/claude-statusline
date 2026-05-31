@@ -206,49 +206,82 @@ interface GhContentEntry {
   type: string;
 }
 
+/** GitHub's listing for a source repo path — directory names only. */
+async function listSourceIds(src: Source): Promise<string[]> {
+  const listing = await ghJson<GhContentEntry[]>(
+    `https://api.github.com/repos/${src.repo}/contents/${src.path}?ref=${src.ref}`,
+  );
+  return Array.isArray(listing)
+    ? listing.filter((e) => e.type === "dir").map((e) => e.name)
+    : [];
+}
+
+async function fetchOneComponent(src: Source, id: string): Promise<Component | null> {
+  const m = await ghJson<Record<string, unknown>>(rawUrl(src, `${id}/component.json`));
+  if (!m) return null;
+  const [readme, preview] = await Promise.all([
+    ghText(rawUrl(src, `${id}/README.md`)),
+    ghText(rawUrl(src, `${id}/preview.txt`)),
+  ]);
+  return toComponent(m, src, id, readme, preview);
+}
+
 let memo: Promise<Registry> | null = null;
 
+/**
+ * Snapshot is AUTHORITATIVE for the official built-ins — it's committed, complete,
+ * and never rate-limited, so the core set always renders correctly. We then try to
+ * ADD third-party sources from the live registry on a best-effort basis (the
+ * unauthenticated GitHub API is 60 req/hr per IP — fine for the occasional extra
+ * source, not for refetching the whole built-in set on every ISR pass). A registry
+ * PR that adds built-ins is reflected on the next deploy via the snapshot; external
+ * sources show up live without a redeploy.
+ */
 export async function getRegistry(): Promise<Registry> {
   if (memo) return memo;
   memo = (async () => {
+    const base = fromSnapshot();
+    const snapshotPaths = new Set(base.sources.map((s) => `${s.repo}@${s.path}`));
+    const haveIds = new Set(base.components.map((c) => c.id));
+
     const reg = await ghJson<{ sources?: unknown[] }>(REGISTRY_RAW);
     const rawSources = Array.isArray(reg?.sources) ? reg!.sources : [];
-    if (!rawSources.length) return fromSnapshot();
+    const extraSources: Source[] = rawSources
+      .map((s) => {
+        const o = asObj(s);
+        return {
+          repo: asStr(o.repo),
+          ref: asStr(o.ref, "main"),
+          path: asStr(o.path),
+          author: asStr(o.author),
+          official: o.official === true,
+          description: asStr(o.description) || undefined,
+        };
+      })
+      .filter((s) => s.repo && s.path && !snapshotPaths.has(`${s.repo}@${s.path}`));
 
-    const sources: Source[] = rawSources.map((s) => {
-      const o = asObj(s);
-      return {
-        repo: asStr(o.repo),
-        ref: asStr(o.ref, "main"),
-        path: asStr(o.path),
-        author: asStr(o.author),
-        official: o.official === true,
-        description: asStr(o.description) || undefined,
-      };
-    });
-
-    const components: Component[] = [];
-    for (const src of sources) {
-      if (!src.repo || !src.path) continue;
-      const listing = await ghJson<GhContentEntry[]>(
-        `https://api.github.com/repos/${src.repo}/contents/${src.path}?ref=${src.ref}`,
-      );
-      if (!Array.isArray(listing)) continue;
-      const ids = listing.filter((e) => e.type === "dir").map((e) => e.name);
+    const added: Component[] = [];
+    const sources = [...base.sources];
+    let live = false;
+    for (const src of extraSources) {
+      const ids = await listSourceIds(src);
+      if (!ids.length) continue;
+      sources.push(src);
       for (const id of ids) {
-        const m = await ghJson<Record<string, unknown>>(rawUrl(src, `${id}/component.json`));
-        if (!m) continue;
-        const [readme, preview] = await Promise.all([
-          ghText(rawUrl(src, `${id}/README.md`)),
-          ghText(rawUrl(src, `${id}/preview.txt`)),
-        ]);
-        components.push(toComponent(m, src, id, readme, preview));
+        if (haveIds.has(id)) continue; // first writer wins; never shadow a built-in
+        const c = await fetchOneComponent(src, id);
+        if (c) {
+          haveIds.add(id);
+          added.push(c);
+          live = true;
+        }
       }
     }
 
-    if (!components.length) return fromSnapshot();
-    components.sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
-    return { sources, components, byAuthor: groupByAuthor(components), live: true };
+    const components = [...base.components, ...added].sort((a, b) =>
+      a.name.localeCompare(b.name, "en", { sensitivity: "base" }),
+    );
+    return { sources, components, byAuthor: groupByAuthor(components), live };
   })();
   return memo;
 }
