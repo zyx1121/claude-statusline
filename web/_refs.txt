@@ -1,3 +1,0 @@
-app/c/[id]/page.tsx:9:  type StatuslineComponent,
-app/c/[id]/page.tsx:345:  type: StatuslineComponent["manifest"]["type"];
-app/c/[id]/page.tsx:461:  capabilities: StatuslineComponent["manifest"]["capabilities"];
