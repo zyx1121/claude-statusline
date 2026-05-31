@@ -5,11 +5,12 @@ import Markdown from "react-markdown";
 
 import {
   getComponent,
+  getOctants,
   snapshotIds,
   type Component,
   type ComponentRequires,
 } from "@/lib/registry";
-import { Preview } from "@/components/ansi";
+import { MosaicPreview, AnimatedPreview } from "@/components/ansi";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -121,10 +122,14 @@ export default async function ComponentPage({
         ) : null}
       </header>
 
-      {/* Preview — what it actually looks like */}
-      {component.preview.trim() ? (
+      {/* Preview — what it actually looks like (animated) */}
+      {component.mosaic && component.frames?.length ? (
         <section className="mt-8">
-          <Preview ansi={component.preview} className="text-xs" />
+          <MosaicPreview frames={component.frames} octants={getOctants()} px={4} />
+        </section>
+      ) : component.preview.trim() ? (
+        <section className="mt-8">
+          <AnimatedPreview frames={component.frames} fallback={component.preview} className="text-xs" />
         </section>
       ) : null}
 

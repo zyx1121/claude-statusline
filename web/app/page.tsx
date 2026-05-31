@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Boxes, Radio, ShieldCheck, Wifi, KeyRound } from "lucide-react";
 
-import { getRegistry, INSTALL, REPO_URL, type Component } from "@/lib/registry";
-import { Preview } from "@/components/ansi";
+import { getRegistry, getOctants, INSTALL, REPO_URL, type Component } from "@/lib/registry";
+import { MosaicPreview, AnimatedPreview } from "@/components/ansi";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CopyButton } from "@/components/copy-button";
@@ -12,6 +12,7 @@ export const revalidate = 600;
 
 export default async function Home() {
   const reg = await getRegistry();
+  const octants = getOctants();
   const total = reg.components.length;
   const authors = reg.byAuthor.length;
 
@@ -65,7 +66,7 @@ export default async function Home() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {group.components.map((c) => (
-                <ComponentCard key={`${c.repo}/${c.id}`} c={c} />
+                <ComponentCard key={`${c.repo}/${c.id}`} c={c} octants={octants} />
               ))}
             </div>
           </div>
@@ -75,7 +76,7 @@ export default async function Home() {
   );
 }
 
-function ComponentCard({ c }: { c: Component }) {
+function ComponentCard({ c, octants }: { c: Component; octants: string }) {
   return (
     <Link href={`/c/${c.id}`} className="group block">
       <Card className="flex h-full flex-col gap-3 p-4 transition-colors hover:border-foreground/30">
@@ -83,8 +84,10 @@ function ComponentCard({ c }: { c: Component }) {
           <span className="font-mono text-sm font-medium">{c.name}</span>
           <TypeBadge type={c.type} />
         </div>
-        {c.preview.trim() ? (
-          <Preview ansi={c.preview} />
+        {c.mosaic && c.frames?.length ? (
+          <MosaicPreview frames={c.frames} octants={octants} />
+        ) : c.preview.trim() ? (
+          <AnimatedPreview frames={c.frames} fallback={c.preview} />
         ) : (
           <div className="rounded-md border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted-foreground">
             no preview
