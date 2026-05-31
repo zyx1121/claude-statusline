@@ -3,14 +3,37 @@
   "id": "model",
   "name": "Model Name",
   "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "Current model display name in cyan.",
+  "i18n": {
+    "zh-Hant": {
+      "name": "模型名稱",
+      "description": "以 cyan 色顯示目前的模型名稱。"
+    },
+    "zh-Hans": {
+      "name": "模型名称",
+      "description": "以 cyan 色显示当前的模型名称。"
+    }
+  },
   "type": "segment",
   "runtime": "bash",
-  "render": { "entry": "render.sh" },
-  "inputs": ["model.display_name"],
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [
+    "model.display_name"
+  ],
   "requires": {},
   "config": {},
-  "placement": { "slot": "row1", "order": 10 },
-  "capabilities": { "stdin_fields": ["model.display_name"] }
+  "placement": {
+    "slot": "row1",
+    "order": 10
+  },
+  "capabilities": {
+    "stdin_fields": [
+      "model.display_name"
+    ]
+  }
 }

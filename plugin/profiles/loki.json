@@ -1,0 +1,23 @@
+{
+  "$schema": "statusline/profile@1",
+  "name": "loki",
+  "description": "The author's daily driver: a news ticker up top, a creatures stage, a session row (model · context · 5h + 7d limits · cost), a repo row (git · PR · burn · now-playing), and a stock ticker at the bottom.",
+  "rule": true,
+  "components": [
+    { "id": "news",         "slot": "top",    "order": 10 },
+    { "id": "creatures",    "slot": "middle", "order": 10, "config": { "ground": "grass", "resident": 132 } },
+
+    { "id": "model",        "slot": "row1", "order": 10 },
+    { "id": "ctx",          "slot": "row1", "order": 20 },
+    { "id": "ratelimit",    "slot": "row1", "order": 30, "config": { "window": "5h" } },
+    { "id": "ratelimit",    "slot": "row1", "order": 31, "config": { "window": "7d" } },
+    { "id": "cost",         "slot": "row1", "order": 40 },
+
+    { "id": "git",          "slot": "row2", "order": 10 },
+    { "id": "pr",           "slot": "row2", "order": 20 },
+    { "id": "burn",         "slot": "row2", "order": 30 },
+    { "id": "nowplaying",   "slot": "row2", "order": 40 },
+
+    { "id": "stock-ticker", "slot": "bottom", "order": 10 }
+  ]
+}

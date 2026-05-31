@@ -2,7 +2,7 @@
 
 ## What it shows
 
-The current context-window usage as a percentage (`ctx 16%`), shown as an inline segment. The value turns red at ≥80% so you can see when you're approaching the limit at a glance.
+The current context-window usage as a percentage (`ctx 16%`), shown as an inline segment. The value is rounded to the nearest integer and turns red at ≥80% so you can see when you're approaching the limit at a glance. If no usage value is available, the segment renders nothing.
 
 ## Data sources
 

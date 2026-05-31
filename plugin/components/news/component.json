@@ -2,30 +2,73 @@
   "$schema": "statusline/component@1",
   "id": "news",
   "name": "News Ticker",
-  "version": "0.1.0",
-  "author": { "github": "zyx1121" },
-  "description": "Right-scrolling Google News headline ticker (zh-TW RSS, keyless).",
+  "version": "0.2.0",
+  "author": {
+    "github": "zyx1121"
+  },
+  "description": "Right-scrolling Google News headline ticker (en-US RSS, keyless).",
+  "i18n": {
+    "zh-Hant": {
+      "name": "新聞跑馬燈",
+      "description": "由右向左捲動的 Google News 標題跑馬燈（en-US RSS，免金鑰）。"
+    },
+    "zh-Hans": {
+      "name": "新闻跑马灯",
+      "description": "由右向左滚动的 Google News 标题跑马灯（en-US RSS，免密钥）。"
+    }
+  },
   "type": "line",
   "runtime": "python3",
-  "render": { "entry": "render.py", "ttl": 1 },
-  "fetch": { "entry": "render.py", "args": ["--fetch"], "ttl": 3600, "self_managed": true },
-  "inputs": ["session_id"],
-  "requires": { "bin": ["python3"], "network": ["news.google.com"] },
+  "render": {
+    "entry": "render.py",
+    "ttl": 1
+  },
+  "fetch": {
+    "entry": "render.py",
+    "args": [
+      "--fetch"
+    ],
+    "ttl": 3600,
+    "self_managed": true
+  },
+  "inputs": [
+    "session_id"
+  ],
+  "requires": {
+    "bin": [
+      "python3"
+    ],
+    "network": [
+      "news.google.com"
+    ]
+  },
   "config": {
     "schema": {
       "topics": {
         "type": "array",
-        "default": ["top", "台灣", "國際", "科技"],
+        "default": [
+          "top",
+          "world",
+          "technology",
+          "business"
+        ],
         "desc": "Topics. top=Google News top stories, anything else=a search keyword."
       }
     },
     "file": "topics.default"
   },
-  "placement": { "slot": "top", "order": 10 },
+  "placement": {
+    "slot": "top",
+    "order": 10
+  },
   "capabilities": {
-    "network": ["news.google.com"],
+    "network": [
+      "news.google.com"
+    ],
     "exec": false,
-    "fs_write": ["$STATE_DIR"],
+    "fs_write": [
+      "$STATE_DIR"
+    ],
     "stdin_fields": []
   }
 }

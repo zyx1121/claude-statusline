@@ -42,14 +42,14 @@ INK = "\033[38;2;168;178;194m"   # cool light grey — the ticker text colour
 FETCH_COOLDOWN = 120          # don't re-spawn a fetch within this many seconds
 MAX_HEADLINES = 200
 
-# News source — Google News RSS, zh-TW. Swap hl/gl/ceid for another locale.
+# News source — Google News RSS, en-US. Swap hl/gl/ceid for another locale.
 UA = "Mozilla/5.0 (statusline-news; personal feed reader)"
-LOCALE = "hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
+LOCALE = "hl=en-US&gl=US&ceid=US:en"
 
 # Topics are picked in topics.default (one per line; `top` = top stories,
 # anything else = a Google News search keyword). Edit that file to choose topics.
 TOPICS_FILE = Path(os.environ.get("STATUSLINE_CONFIG") or Path(__file__).resolve().parent) / "topics.default"
-DEFAULT_TOPICS = ["top", "台灣", "國際", "科技"]
+DEFAULT_TOPICS = ["top", "world", "technology", "business"]
 
 
 def _topics() -> list[str]:

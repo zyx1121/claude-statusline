@@ -3,14 +3,37 @@
   "id": "cost",
   "name": "Session Cost",
   "version": "0.1.0",
-  "author": { "github": "zyx1121" },
+  "author": {
+    "github": "zyx1121"
+  },
   "description": "Session cost in USD, shown once it climbs above zero.",
+  "i18n": {
+    "zh-Hant": {
+      "name": "Session 花費",
+      "description": "本 session 的累計花費（美金），花費大於 0 時才顯示。"
+    },
+    "zh-Hans": {
+      "name": "Session 花费",
+      "description": "本 session 的累计花费（美金），花费大于 0 时才显示。"
+    }
+  },
   "type": "segment",
   "runtime": "bash",
-  "render": { "entry": "render.sh" },
-  "inputs": ["cost.total_cost_usd"],
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [
+    "cost.total_cost_usd"
+  ],
   "requires": {},
   "config": {},
-  "placement": { "slot": "row1", "order": 40 },
-  "capabilities": { "stdin_fields": ["cost.total_cost_usd"] }
+  "placement": {
+    "slot": "row1",
+    "order": 40
+  },
+  "capabilities": {
+    "stdin_fields": [
+      "cost.total_cost_usd"
+    ]
+  }
 }

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { getDict, getLocale, localeOptions } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -15,6 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 const REPO_URL = "https://github.com/zyx1121/claude-statusline";
+
+// One container width shared by the header, every page, and the footer.
+const CONTAINER = "mx-auto w-full max-w-5xl px-4 sm:px-6";
 
 export const metadata: Metadata = {
   title: "claude-statusline — a Claude-native, modular status line",
@@ -31,59 +37,77 @@ function GitHubMark(props: ComponentProps<"svg">) {
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const t = getDict(locale);
+
   return (
     <html
-      lang="en"
+      lang={locale}
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="bg-background text-foreground flex min-h-full flex-col">
         <header className="border-border/60 bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 w-full border-b backdrop-blur">
-          <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
+          <div className={`${CONTAINER} flex h-14 items-center justify-between`}>
             <Link
               href="/"
               className="hover:text-foreground/80 font-mono text-sm font-semibold tracking-tight transition-colors"
             >
               claude-statusline
             </Link>
-            <nav className="flex items-center gap-5 text-sm">
+            <nav className="flex items-center gap-4 text-sm sm:gap-5">
               <Link
                 href="/"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Components
+                {t.nav.components}
+              </Link>
+              <Link
+                href="/templates"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {t.nav.templates}
               </Link>
               <Link
                 href="/spec"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Spec
+                {t.nav.spec}
               </Link>
               <a
                 href={REPO_URL}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
-                aria-label="GitHub repository"
+                aria-label={t.nav.github}
               >
                 <GitHubMark className="size-4" />
-                <span className="hidden sm:inline">GitHub</span>
+                <span className="hidden sm:inline">{t.nav.github}</span>
               </a>
+              <LanguageSwitcher
+                current={locale}
+                options={localeOptions()}
+                label={t.nav.language}
+              />
             </nav>
           </div>
         </header>
 
-        <div className="flex-1">{children}</div>
+        <div className="flex-1">
+          <div className={CONTAINER}>{children}</div>
+        </div>
 
         <footer className="border-border/60 border-t">
-          <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 px-4 py-6 text-xs sm:flex-row sm:px-6">
+          <div
+            className={`${CONTAINER} text-muted-foreground flex flex-col items-center justify-between gap-2 py-6 text-xs sm:flex-row`}
+          >
             <p>
-              MIT License &middot; built by{" "}
+              {t.footer.license} &middot; {t.footer.builtBy}{" "}
               <a
                 href="https://github.com/zyx1121"
                 target="_blank"

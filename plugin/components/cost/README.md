@@ -2,24 +2,24 @@
 
 ## What it shows
 
-本 session 累計花費（美金），格式 `$%.2f`（例如 `$1.27`）。數值以 accent 色（`VAL`）顯示。
+The accumulated cost of the current session, in USD, formatted as `$%.2f` (e.g. `$1.27`). The value is rendered in the accent color (`VAL`).
 
 ## Data sources
 
-- `CC_COST` — 由 loader 從 stdin JSON 的 `cost.total_cost_usd` 投影而來。
+- `CC_COST` — projected by the loader from `cost.total_cost_usd` in the stdin JSON.
 
 ## Config
 
-無。config-less segment，`$1` 接到的 JSON 會被忽略。
+None. This is a config-less segment; the JSON passed in `$1` is ignored.
 
 ## Requires
 
-無外部依賴。只用 core.sh 的 `VAL` / `RESET` palette 變數。
+No external dependencies. Uses only the `VAL` / `RESET` palette variables from core.sh.
 
 ## Safety notes
 
-- 空字串、`"0"`、舊 sentinel `"-"` 一律 `return 0`（不設 `REPLY`），所以只有花費 > 0 才會顯示。
-- 不寫 stdout、不 fork、不碰檔案系統。
+- An empty string, `"0"`, or the legacy sentinel `"-"` all `return 0` (without setting `REPLY`), so the segment only renders once cost is greater than 0.
+- Writes nothing to stdout, never forks, never touches the filesystem.
 
 ## Example output
 

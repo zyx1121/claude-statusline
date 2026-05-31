@@ -66,12 +66,31 @@ function readComponent(dir) {
     requires: { bin: asArr(requires.bin), network: asArr(requires.network), macos: asArr(requires.macos), env: asArr(requires.env) },
     configSchema,
     placement: asObj(m.placement),
+    // Localized display strings (English source in name/description; zh-* optional).
+    i18n: asObj(m.i18n),
     readme: readText(path.join(cd, "README.md")),
+    // Per-locale READMEs for the marketplace web (English is the source-of-truth
+    // README.md the plugin ships; zh-Hant/zh-Hans are translations, "" if absent).
+    readmes: {
+      en: readText(path.join(cd, "README.md")),
+      "zh-Hant": readText(path.join(cd, "README.zh-Hant.md")),
+      "zh-Hans": readText(path.join(cd, "README.zh-Hans.md")),
+    },
     preview: readText(path.join(cd, "preview.txt")),
     frames: readFrames(path.join(cd, "frames.json")),
     mosaic: MOSAIC_RE.test(readText(path.join(cd, "preview.txt"))),
   };
 }
+
+// Profile templates (the marketplace shows these + a one-line installer each).
+const PROFILES_DIR = path.join(REPO, "plugin", "profiles");
+const profiles = fs.existsSync(PROFILES_DIR)
+  ? fs.readdirSync(PROFILES_DIR)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => readJson(path.join(PROFILES_DIR, f)))
+      .filter(Boolean)
+      .sort((a, b) => asStr(a.name).localeCompare(asStr(b.name), "en"))
+  : [];
 
 const components = fs.readdirSync(COMPONENTS_DIR, { withFileTypes: true })
   .filter((e) => e.isDirectory())
@@ -83,6 +102,7 @@ const out = {
   generatedFrom: "plugin/components",
   sources: reg.sources ?? [builtin],
   components,
+  profiles,
   contractMd: readText(CONTRACT),
   // 256-entry octant table (index = 8-bit 2×4 pattern → glyph). The web inverts
   // it to decode mosaic frames into real coloured pixels.
