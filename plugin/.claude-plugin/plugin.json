@@ -1,7 +1,7 @@
 {
   "name": "statusline",
   "description": "A Claude-native, modular status line for Claude Code — composable components (tickers, widgets, segments) and templates, installable and tunable from inside Claude Code.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": {
     "name": "Loki",
     "email": "yongxiang.zhan@outlook.com"
