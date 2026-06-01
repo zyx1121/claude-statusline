@@ -12,7 +12,7 @@ Rendered with octant blocks (2×4 sub-pixels per cell, two colours per cell). At
 custom-draws the Legacy-Computing octant block, so font coverage is irrelevant.
 Pure stdlib.
 
-Usage: render.py <cols> [--session ID] [--ground STYLE] [--resident DEX] [--state PATH] [--data DIR]
+Usage: render.py <cols> [--session ID] [--ground STYLE] [--resident DEX[,DEX...]] [--state PATH] [--data DIR]
 Paths default to the loader-provided STATUSLINE_STATE (state) and STATUSLINE_CONFIG/assets (sprites).
 """
 from __future__ import annotations
@@ -131,24 +131,30 @@ def overlaps(x, w_cells, others, world, skip=None) -> bool:
     return False
 
 
-def tick(state, world, cols, rng, resident=None):
+def tick(state, world, cols, rng, residents=None):
     creatures = state.get("creatures", [])
     state["tick"] = state.get("tick", 0) + 1
     cap = max(1, min(3, cols // 45))
 
-    # permanent resident (e.g. Ditto) — always present, never expires, keeps pacing
-    if resident is not None and world.sprite(resident) and not any(c.get("resident") for c in creatures):
-        w = world.cellw(resident)
-        if w <= cols:
-            for _ in range(8):
-                x = rng.randint(0, cols - w)
-                if not overlaps(x, w, creatures, world):
-                    creatures.append({"sp": resident, "x": x, "dir": rng.choice((-1, 1)),
-                                      "age": 0, "ttl": 1 << 30, "resident": True})
-                    break
+    # permanent residents (e.g. Ditto, Psyduck) — always present, never expire, keep
+    # pacing. One per listed dex; spawn any that aren't on screen yet at a free spot.
+    on_screen = {c["sp"] for c in creatures if c.get("resident")}
+    for rdex in (residents or []):
+        if rdex in on_screen or not world.sprite(rdex):
+            continue
+        w = world.cellw(rdex)
+        if w > cols:
+            continue
+        for _ in range(8):
+            x = rng.randint(0, cols - w)
+            if not overlaps(x, w, creatures, world):
+                creatures.append({"sp": rdex, "x": x, "dir": rng.choice((-1, 1)),
+                                  "age": 0, "ttl": 1 << 30, "resident": True})
+                on_screen.add(rdex)
+                break
 
-    # resident Ditto mimics a neighbour now and then (its signature trick)
-    res = next((c for c in creatures if c.get("resident")), None)
+    # a resident Ditto mimics a neighbour now and then (its signature trick)
+    res = next((c for c in creatures if c.get("resident") and c["sp"] == 132), None)
     if res is not None:
         others = [c for c in creatures if not c.get("resident")]
         if "morph" not in res and others and rng.random() < MORPH_PROB:
@@ -305,7 +311,7 @@ def render(state, world, cols, ground=None):
 
 def main() -> int:
     args = sys.argv[1:]
-    data_dir, state_path, cols, session, ground, resident = DEFAULT_DATA, None, 80, None, None, None
+    data_dir, state_path, cols, session, ground, residents = DEFAULT_DATA, None, 80, None, None, []
     i = 0
     while i < len(args):
         a = args[i]
@@ -318,10 +324,9 @@ def main() -> int:
         elif a == "--ground":
             ground = args[i + 1] if i + 1 < len(args) else None; i += 2
         elif a == "--resident":
-            try:
-                resident = int(args[i + 1])
-            except (IndexError, ValueError):
-                resident = None
+            # comma-separated dex numbers → one permanent resident each (e.g. "132,54")
+            if i + 1 < len(args):
+                residents = [int(p) for p in args[i + 1].split(",") if p.strip().isdigit()]
             i += 2
         else:
             try:
@@ -338,7 +343,7 @@ def main() -> int:
     if rng.random() < 0.01:                       # occasional cleanup of idle sessions
         prune_sessions()
 
-    state = tick(state, world, max(1, cols), rng, resident)
+    state = tick(state, world, max(1, cols), rng, residents)
     try:
         state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
     except OSError:

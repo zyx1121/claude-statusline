@@ -5,7 +5,7 @@
   "rule": true,
   "components": [
     { "id": "news",         "slot": "top",    "order": 10 },
-    { "id": "creatures",    "slot": "middle", "order": 10, "config": { "ground": "grass", "resident": 132 } },
+    { "id": "creatures",    "slot": "middle", "order": 10, "config": { "ground": "grass", "resident": "132,54" } },
 
     { "id": "model",        "slot": "row1", "order": 10 },
     { "id": "ctx",          "slot": "row1", "order": 20 },

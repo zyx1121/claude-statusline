@@ -55,10 +55,10 @@ sd="${STATE}/news";   mkdir -p "$sd"; STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="
 write news        "$(STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="${COMP}/news"        python3 "${COMP}/news/render.py" "$COLS" --session "$SID" 2>/dev/null)"
 sd="${STATE}/stk";    mkdir -p "$sd"; STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="${COMP}/stock-ticker" python3 "${COMP}/stock-ticker/render.py" --fetch >/dev/null 2>&1
 write stock-ticker "$(STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="${COMP}/stock-ticker" python3 "${COMP}/stock-ticker/render.py" "$COLS" --session "$SID" 2>/dev/null)"
-# creatures: warm one tick so a resident pokémon (132 ditto) appears, capture the next frame
+# creatures: warm a few ticks so the resident pokémon (132 Ditto + 54 Psyduck) appear, capture the next frame
 sd="${STATE}/crt";    mkdir -p "$sd"
-for i in 1 2 3 4 5; do STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="${COMP}/creatures" python3 "${COMP}/creatures/render.py" "$COLS" --session "$SID" --ground grass --resident 132 >/dev/null 2>&1; done
-write creatures   "$(STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="${COMP}/creatures" python3 "${COMP}/creatures/render.py" "$COLS" --session "$SID" --ground grass --resident 132 2>/dev/null)"
+for i in 1 2 3 4 5; do STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="${COMP}/creatures" python3 "${COMP}/creatures/render.py" "$COLS" --session "$SID" --ground grass --resident 132,54 >/dev/null 2>&1; done
+write creatures   "$(STATUSLINE_STATE="$sd" STATUSLINE_CONFIG="${COMP}/creatures" python3 "${COMP}/creatures/render.py" "$COLS" --session "$SID" --ground grass --resident 132,54 2>/dev/null)"
 
 rm -rf "$STATE"
 echo "done."
