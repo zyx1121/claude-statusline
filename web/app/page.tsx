@@ -4,6 +4,7 @@ import { Boxes, Radio, ShieldCheck, Wifi, KeyRound } from "lucide-react";
 import {
   getRegistry,
   getOctants,
+  getDemo,
   localizedName,
   localizedDescription,
   INSTALL,
@@ -11,7 +12,7 @@ import {
   type Component,
 } from "@/lib/registry";
 import { getDict, getLocale, type Dict, type Locale } from "@/lib/i18n";
-import { MosaicPreview, AnimatedPreview } from "@/components/ansi";
+import { MosaicPreview, AnimatedPreview, TerminalDemo } from "@/components/ansi";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CopyButton } from "@/components/copy-button";
@@ -24,6 +25,7 @@ export default async function Home() {
   const t = getDict(locale);
   const reg = await getRegistry();
   const octants = getOctants();
+  const demo = getDemo();
   const total = reg.components.length;
   const authors = reg.byAuthor.length;
 
@@ -51,6 +53,12 @@ export default async function Home() {
           </a>
         </p>
       </section>
+
+      {demo ? (
+        <section className="mt-10">
+          <TerminalDemo frames={demo.frames} octants={octants} cols={demo.cols} />
+        </section>
+      ) : null}
 
       <section className="mt-14 space-y-12">
         {reg.byAuthor.map((group) => (

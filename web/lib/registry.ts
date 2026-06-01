@@ -376,6 +376,20 @@ export function getOctants(): string {
   return asStr((snapshot as { octants?: string }).octants);
 }
 
+export interface Demo {
+  cols: number;
+  frames: string[];
+}
+
+/** Captured full-profile loader frames for the home-page terminal demo. */
+export function getDemo(): Demo | null {
+  const d = (snapshot as { demo?: unknown }).demo;
+  const o = asObj(d);
+  const frames = Array.isArray(o.frames) ? (o.frames as string[]) : [];
+  if (!frames.length) return null;
+  return { cols: typeof o.cols === "number" ? o.cols : 80, frames };
+}
+
 export function getMarketplaceMeta() {
   return { name: "statusline", marketplace: "claude-statusline", owner: "zyx1121", repo: REPO };
 }
