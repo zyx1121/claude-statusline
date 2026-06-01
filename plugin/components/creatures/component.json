@@ -2,7 +2,7 @@
   "$schema": "statusline/component@1",
   "id": "creatures",
   "name": "Creatures",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "github": "zyx1121"
   },
@@ -36,12 +36,12 @@
       "ground": {
         "type": "string",
         "default": "grass",
-        "desc": "Ground strip style under the creatures (\"grass\" paints a time-of-day grass strip; anything else = bare)."
+        "desc": "Ground strip style under the creatures (\"grass\" paints a solid green grass band; anything else = bare)."
       },
       "resident": {
-        "type": "number",
-        "default": 132,
-        "desc": "Dex number of the permanent resident creature that never expires (default 132 = Ditto)."
+        "type": "string",
+        "default": "132",
+        "desc": "Comma-separated dex numbers of permanent residents that never expire (e.g. \"132,54\" = Ditto + Psyduck). Default 132 (Ditto)."
       }
     }
   },

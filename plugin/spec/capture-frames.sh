@@ -19,7 +19,7 @@ for dir in "$COMP"/*/; do
   entry=$(jq -r '.render.entry // "render.py"' "$mf")
   runtime=$(jq -r '.runtime // "python3"' "$mf")
   flags=()
-  case "$id" in creatures) flags=(--ground grass --resident 132);; esac
+  case "$id" in creatures) flags=(--ground grass --resident 132,54);; esac
 
   st=$(mktemp -d)
   # Components with a background fetch (news, stock-ticker) render from a cache —
