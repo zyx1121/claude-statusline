@@ -2,16 +2,19 @@
 """statusline-news — a right-scrolling news ticker line for the status line.
 
 Two modes:
-  render  (default)  statusline-news.py <cols> --session <id>
+  render  (default)  statusline-news.py <cols> --session <id> [--topics a,b,c]
       Read the cached headlines, build a per-session running order (seeded by
       session id + cache hour, so it's stable within the hour but differs per
       session and refreshes hourly), and emit ONE line: a CJK-width-aware window
       that scrolls right-to-left one cell per tick. Never blocks on the network — if
       the cache is from an earlier clock hour it fires a detached --fetch and
       renders the current cache meanwhile.
-  --fetch            statusline-news.py --fetch
+  --fetch            statusline-news.py --fetch [--topics a,b,c]
       Pull the configured Google News feeds, normalize titles, dedupe, and write
       the cache. Meant to run ~hourly (triggered by the render path).
+
+  --topics overrides the topics.default file with a comma-separated list (the
+  loader passes the per-profile `topics` config this way).
 
 Pure stdlib. News source = Google News RSS (keyless); a personal status-line
 ticker is the personal feed-reader use its feed <copyright> permits.
@@ -42,9 +45,25 @@ INK = "\033[38;2;168;178;194m"   # cool light grey — the ticker text colour
 FETCH_COOLDOWN = 120          # don't re-spawn a fetch within this many seconds
 MAX_HEADLINES = 200
 
-# News source — Google News RSS, en-US. Swap hl/gl/ceid for another locale.
+# News source — Google News RSS. The `lang` config picks the hl/gl/ceid preset
+# (which language/region Google News serves); topics are the feeds within it.
 UA = "Mozilla/5.0 (statusline-news; personal feed reader)"
-LOCALE = "hl=en-US&gl=US&ceid=US:en"
+DEFAULT_LANG = "en-US"
+LOCALES = {
+    "en-US": "hl=en-US&gl=US&ceid=US:en",
+    "en-GB": "hl=en-GB&gl=GB&ceid=GB:en",
+    "zh-TW": "hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
+    "zh-HK": "hl=zh-HK&gl=HK&ceid=HK:zh-Hant",
+    "zh-CN": "hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+    "ja": "hl=ja&gl=JP&ceid=JP:ja",
+    "ko": "hl=ko&gl=KR&ceid=KR:ko",
+    "fr": "hl=fr&gl=FR&ceid=FR:fr",
+    "de": "hl=de&gl=DE&ceid=DE:de",
+}
+
+
+def _locale(lang: str | None) -> str:
+    return LOCALES.get(lang or DEFAULT_LANG, LOCALES[DEFAULT_LANG])
 
 # Topics are picked in topics.default (one per line; `top` = top stories,
 # anything else = a Google News search keyword). Edit that file to choose topics.
@@ -52,7 +71,13 @@ TOPICS_FILE = Path(os.environ.get("STATUSLINE_CONFIG") or Path(__file__).resolve
 DEFAULT_TOPICS = ["top", "world", "technology", "business"]
 
 
-def _topics() -> list[str]:
+def _topics(override: str | None = None) -> list[str]:
+    # A `--topics` flag (comma-separated, set per-profile in the loader config) wins
+    # over the topics.default file, which in turn falls back to DEFAULT_TOPICS.
+    if override:
+        ts = [t.strip() for t in override.split(",") if t.strip()]
+        if ts:
+            return ts
     try:
         lines = TOPICS_FILE.read_text(encoding="utf-8").splitlines()
     except OSError:
@@ -61,13 +86,13 @@ def _topics() -> list[str]:
     return topics or DEFAULT_TOPICS
 
 
-def _feeds(topics: list[str]) -> list[str]:
+def _feeds(topics: list[str], locale: str) -> list[str]:
     urls = []
     for t in topics:
         if t.lower() == "top":
-            urls.append(f"https://news.google.com/rss?{LOCALE}")
+            urls.append(f"https://news.google.com/rss?{locale}")
         else:
-            urls.append(f"https://news.google.com/rss/search?q={urllib.parse.quote(f'{t} when:1d')}&{LOCALE}")
+            urls.append(f"https://news.google.com/rss/search?q={urllib.parse.quote(f'{t} when:1d')}&{locale}")
     return urls
 
 
@@ -104,10 +129,11 @@ def _clean_title(t: str) -> str:
     return " ".join(t.split())
 
 
-def fetch() -> int:
-    topics = _topics()
+def fetch(override: str | None = None, lang: str | None = None) -> int:
+    topics = _topics(override)
+    locale = _locale(lang)
     seen, headlines = set(), []
-    for url in _feeds(topics):
+    for url in _feeds(topics, locale):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             data = urllib.request.urlopen(req, timeout=10).read()
@@ -128,15 +154,19 @@ def fetch() -> int:
     tmp = CACHE.with_suffix(f".{os.getpid()}.tmp")
     tmp.write_text(json.dumps(
         {"fetched_at": datetime.now().isoformat(timespec="seconds"),
-         "hour": _hour(), "topics": topics, "headlines": headlines[:MAX_HEADLINES]},
+         "hour": _hour(), "lang": lang or DEFAULT_LANG, "topics": topics,
+         "headlines": headlines[:MAX_HEADLINES]},
         ensure_ascii=False), encoding="utf-8")
     os.replace(tmp, CACHE)
     return 0
 
 
-def _maybe_refresh(cache: dict):
-    """Fire a detached fetch when the cache is stale (new hour or topics changed)."""
-    if cache and cache.get("hour") == _hour() and cache.get("topics") == _topics():
+def _maybe_refresh(cache: dict, override: str | None = None, lang: str | None = None):
+    """Fire a detached fetch when the cache is stale (new hour, topics, or lang changed)."""
+    want_lang = lang or DEFAULT_LANG
+    if (cache and cache.get("hour") == _hour()
+            and cache.get("topics") == _topics(override)
+            and cache.get("lang", DEFAULT_LANG) == want_lang):
         return
     try:
         if LOCK.exists() and time.time() - LOCK.stat().st_mtime < FETCH_COOLDOWN:
@@ -144,10 +174,14 @@ def _maybe_refresh(cache: dict):
         LOCK.write_text(str(time.time()))
     except OSError:
         return
+    cmd = [sys.executable, str(Path(__file__).resolve()), "--fetch"]
+    if override:                  # propagate the topic + lang overrides to the detached fetch
+        cmd += ["--topics", override]
+    if lang:
+        cmd += ["--lang", lang]
     try:
         subprocess.Popen(
-            [sys.executable, str(Path(__file__).resolve()), "--fetch"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL, start_new_session=True)
     except Exception:
         pass
@@ -177,10 +211,10 @@ def _window(items, total, start, cols) -> str:
     return "".join(out)
 
 
-def render(cols: int, session: str | None) -> str:
+def render(cols: int, session: str | None, override: str | None = None, lang: str | None = None) -> str:
     blank = INK + " " * cols + "\033[0m"
     cache = _load_dict(CACHE)
-    _maybe_refresh(cache)
+    _maybe_refresh(cache, override, lang)
 
     headlines = cache.get("headlines")
     if not isinstance(headlines, list) or not headlines:
@@ -227,15 +261,29 @@ def _prune():
             pass
 
 
+def _opt(args: list[str], name: str) -> str | None:
+    if name in args:
+        j = args.index(name)
+        if j + 1 < len(args):
+            return args[j + 1]
+    return None
+
+
 def main() -> int:
     args = sys.argv[1:]
+    # --topics "a,b,c" and --lang zh-TW override the topics.default file / default
+    # locale (the loader passes the per-profile `topics` / `lang` config this way).
+    topics = _opt(args, "--topics")
+    lang = _opt(args, "--lang")
     if "--fetch" in args:
-        return fetch()
+        return fetch(topics, lang)
     cols, session = 80, None
     i = 0
     while i < len(args):
         if args[i] == "--session":
             session = args[i + 1] if i + 1 < len(args) else None
+            i += 2
+        elif args[i] in ("--topics", "--lang"):
             i += 2
         else:
             try:
@@ -243,7 +291,7 @@ def main() -> int:
             except ValueError:
                 pass
             i += 1
-    sys.stdout.write(render(max(1, cols), session))
+    sys.stdout.write(render(max(1, cols), session, topics, lang))
     return 0
 
 

@@ -15,9 +15,12 @@
 
 ## Config
 
-- `topics` (array) — topic 清單，預設 `["top", "world", "technology", "business"]`。
-- 設定檔 `topics.default`：一行一個 topic，`#` 開頭為註解。`top` = Google News top stories，其餘字串當作 Google News 搜尋關鍵字。
-- loader 透過 `STATUSLINE_CONFIG` 指向本 component 目錄，render.py 從該目錄讀 `topics.default`。
+| 鍵 | 型別 | 預設 | 說明 |
+|-----|------|---------|---------|
+| `lang` | string | `en-US` | Google News 語系——決定服務哪個語言/地區。可選 `en-US`、`en-GB`、`zh-TW`、`zh-HK`、`zh-CN`、`ja`、`ko`、`fr`、`de`。 |
+| `topics` | string | `top,world,technology,business` | 逗號分隔的 topics（不含空白）。`top` = Google News 頭條，其餘字串當搜尋關鍵字。會覆蓋 `topics.default`。 |
+
+未設 `topics` config 時，topics 來自 `topics.default` 檔（一行一個、`#` 為註解）。範例：`lang=zh-TW` + `topics=top,國際,科技,AI` → 繁體中文台灣新聞。
 
 ## Requires
 

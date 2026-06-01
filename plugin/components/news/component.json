@@ -2,7 +2,7 @@
   "$schema": "statusline/component@1",
   "id": "news",
   "name": "News Ticker",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "github": "zyx1121"
   },
@@ -44,15 +44,16 @@
   },
   "config": {
     "schema": {
+      "lang": {
+        "type": "string",
+        "enum": ["en-US", "en-GB", "zh-TW", "zh-HK", "zh-CN", "ja", "ko", "fr", "de"],
+        "default": "en-US",
+        "desc": "Google News locale (which language/region to serve). e.g. zh-TW for Traditional-Chinese Taiwan news."
+      },
       "topics": {
-        "type": "array",
-        "default": [
-          "top",
-          "world",
-          "technology",
-          "business"
-        ],
-        "desc": "Topics. top=Google News top stories, anything else=a search keyword."
+        "type": "string",
+        "default": "top,world,technology,business",
+        "desc": "Comma-separated topics (no spaces), e.g. \"top,world,科技\". top=Google News top stories, anything else=a search keyword. Overrides the topics.default file."
       }
     },
     "file": "topics.default"
