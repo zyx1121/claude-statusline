@@ -13,6 +13,7 @@ const REPO = path.resolve(WEB, "..");
 const COMPONENTS_DIR = path.join(REPO, "plugin", "components");
 const REGISTRY = path.join(REPO, "registry.json");
 const CONTRACT = path.join(REPO, "plugin", "spec", "CONTRACT.md");
+const DEMO = path.join(REPO, "plugin", "spec", "demo.frames.json");
 const OUT = path.join(WEB, "lib", "registry.generated.json");
 
 if (!fs.existsSync(COMPONENTS_DIR)) {
@@ -103,6 +104,9 @@ const out = {
   sources: reg.sources ?? [builtin],
   components,
   profiles,
+  // Captured full-profile loader output for the home-page terminal demo (composed
+  // components: news + creatures + segment rows + stock ticker), cycled ~1/s.
+  demo: readJson(DEMO),
   contractMd: readText(CONTRACT),
   // 256-entry octant table (index = 8-bit 2×4 pattern → glyph). The web inverts
   // it to decode mosaic frames into real coloured pixels.

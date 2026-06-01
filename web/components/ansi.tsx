@@ -147,6 +147,117 @@ export function MosaicPreview({
   );
 }
 
+// ---------- big terminal demo (a whole profile composed) ----------
+
+// A line belongs to the mosaic (creatures) block if it carries block-element or
+// legacy-computing octant/sextant glyphs. The rule divider (U+2500 box-drawing) and
+// all the ANSI text rows do NOT match, so they render as crisp selectable text.
+const MOSAIC_LINE = /[▀-▟\u{1CD00}-\u{1CEBF}\u{1FB00}-\u{1FBFF}]/u;
+
+/**
+ * Renders a full status-line profile (captured through the real loader) as a big
+ * animated terminal: the contiguous creatures block is pixel-decoded onto a canvas,
+ * every other line is an ANSI text row, stacked on one character grid so they align.
+ * Font size tracks the container width so `cols` characters fill it.
+ */
+export function TerminalDemo({
+  frames,
+  octants,
+  cols,
+  label = "claude — statusline",
+  className = "",
+}: {
+  frames: string[];
+  octants: string;
+  cols: number;
+  label?: string;
+  className?: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [idx, setIdx] = useState(0);
+  const [fs, setFs] = useState(13);
+
+  const list = frames.length ? frames : [""];
+  useEffect(() => {
+    if (list.length < 2) return;
+    const id = setInterval(() => setIdx((n) => (n + 1) % list.length), 1000);
+    return () => clearInterval(id);
+  }, [list.length]);
+
+  // Size the monospace grid so `cols` chars fill the available width (mono advance ≈ 0.6em).
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const fit = () => {
+      const w = el.clientWidth - 28; // minus horizontal padding
+      setFs(Math.max(7, Math.min(18, w / (cols * 0.6))));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [cols]);
+
+  const frame = list[idx % list.length].replace(/\n+$/, "");
+  const lines = frame.split("\n");
+  const start = lines.findIndex((l) => MOSAIC_LINE.test(l));
+  let end = -1;
+  if (start >= 0) {
+    end = start;
+    while (end + 1 < lines.length && MOSAIC_LINE.test(lines[end + 1])) end++;
+  }
+  const pre = start >= 0 ? lines.slice(0, start) : lines;
+  const mosaic = start >= 0 ? lines.slice(start, end + 1) : [];
+  const post = start >= 0 ? lines.slice(end + 1) : [];
+
+  useEffect(() => {
+    if (canvasRef.current && mosaic.length) {
+      drawMosaic(canvasRef.current, mosaic.join("\n"), invTable(octants), 3);
+    }
+  }, [idx, octants, mosaic.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const Row = (line: string, key: string) => {
+    const cells = parseCells(line)[0] ?? [];
+    return (
+      <div key={key} className="whitespace-pre" style={{ minHeight: "1.35em" }}>
+        {cells.length ? cellSpans(cells, 0) : " "}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      className={
+        "overflow-hidden rounded-xl border border-border/60 bg-[#0c0d12] shadow-2xl " + className
+      }
+    >
+      <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
+        <span className="size-3 rounded-full bg-[#ff5f57]" />
+        <span className="size-3 rounded-full bg-[#febc2e]" />
+        <span className="size-3 rounded-full bg-[#28c840]" />
+        <span className="ml-2 font-mono text-[11px] text-neutral-500">{label}</span>
+      </div>
+      <div ref={bodyRef} className="overflow-x-auto px-3.5 py-3">
+        <div
+          className="font-mono leading-[1.35] text-neutral-200"
+          style={{ width: "max-content", minWidth: "100%", fontSize: `${fs}px` }}
+        >
+          {pre.map((l, i) => Row(l, `pre-${i}`))}
+          {mosaic.length ? (
+            <canvas
+              ref={canvasRef}
+              className="block w-full [image-rendering:pixelated]"
+              style={{ height: `${mosaic.length * 1.35}em` }}
+            />
+          ) : null}
+          {post.map((l, i) => Row(l, `post-${i}`))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------- text widgets / segments ----------
 
 function cellSpans(cells: Cell[], keyBase: number): ReactNode[] {
