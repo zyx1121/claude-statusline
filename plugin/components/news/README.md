@@ -15,9 +15,12 @@ One CJK-width-aware ring of Google News headlines that advances one cell to the 
 
 ## Config
 
-- `topics` (array) — the topic list, default `["top", "world", "technology", "business"]`.
-- Config file `topics.default`: one topic per line, lines starting with `#` are comments. `top` = Google News top stories, any other string is used as a Google News search keyword.
-- The loader points `STATUSLINE_CONFIG` at this component directory, and `render.py` reads `topics.default` from there.
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `lang` | string | `en-US` | Google News locale — which language/region to serve. One of `en-US`, `en-GB`, `zh-TW`, `zh-HK`, `zh-CN`, `ja`, `ko`, `fr`, `de`. |
+| `topics` | string | `top,world,technology,business` | Comma-separated topics (no spaces). `top` = Google News top stories; any other string is a search keyword. Overrides `topics.default`. |
+
+When no `topics` config is given, topics come from the `topics.default` file (one per line, `#` for comments). Example: `lang=zh-TW` + `topics=top,國際,科技,AI` → Traditional-Chinese Taiwan news.
 
 ## Requires
 
