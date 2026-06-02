@@ -78,7 +78,7 @@ render__<id>() {            # $1 = config JSON (此 instance 的 config，已補
   （`1h20m` / `42m` / `now`）、`join_sep`。
 - 退出以 `return 0` 為準。
 
-同一 slot（`row1` / `row2`）內所有非空 segment 依 `order` 由小到大、以 ` · ` 串接成一行。
+同一 slot（`row1` / `row2`）內所有非空 segment 依 `order` 由小到大、以 ` · ` 串接；instance 的 `align`（`left` 預設 / `right`）再把 segment 分成左群靠左、右群靠右，中間補空格撐滿終端寬度。
 
 ## line 約定
 
