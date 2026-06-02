@@ -39,23 +39,23 @@ SID="$CC_SID"
 PROFILE="${STATUSLINE_PROFILE:-${PROFILES}/default.json}"
 [ -f "$PROFILE" ] || PROFILE="${PLUGIN_ROOT}/profiles/full.json"
 
-# Walk components, bucket outputs by slot.
-declare -a ROW1 ROW2 TOP MIDDLE BOTTOM
-while IFS=$'\t' read -r id slot order cfg; do
+# Walk components, bucket outputs by slot. Segments split into left/right by align.
+declare -a ROW1_L ROW1_R ROW2_L ROW2_R TOP MIDDLE BOTTOM
+while IFS=$'\t' read -r id slot order cfg align; do
   [ -n "$id" ] || continue
   case "$slot" in
-    row1)   out=$(render_segment "$id" "$cfg"); [ -n "$out" ] && ROW1+=("$out");;
-    row2)   out=$(render_segment "$id" "$cfg"); [ -n "$out" ] && ROW2+=("$out");;
+    row1)   out=$(render_segment "$id" "$cfg"); [ -n "$out" ] && { [ "$align" = right ] && ROW1_R+=("$out") || ROW1_L+=("$out"); };;
+    row2)   out=$(render_segment "$id" "$cfg"); [ -n "$out" ] && { [ "$align" = right ] && ROW2_R+=("$out") || ROW2_L+=("$out"); };;
     top)    out=$(render_widget  "$id" "$cfg" "$COLS" "$SID"); [ -n "$out" ] && TOP+=("$out");;
     middle) out=$(render_widget  "$id" "$cfg" "$COLS" "$SID"); [ -n "$out" ] && MIDDLE+=("$out");;
     bottom) out=$(render_widget  "$id" "$cfg" "$COLS" "$SID"); [ -n "$out" ] && BOTTOM+=("$out");;
   esac
 done < <(profile_iter "$PROFILE")
 
-# Assemble — fixed slot order, arbitrary lines per slot. segment rows go through %b
-# (to interpret the literal-ESC separator); widget bytes print verbatim with %s.
+# Assemble — fixed slot order, arbitrary lines per slot. Segment rows compose a left
+# group + a right group (align), padded apart to fill COLS; widget bytes print with %s.
 for w in "${TOP[@]}";    do printf '%s\n' "$w"; done
 for w in "${MIDDLE[@]}"; do printf '%s\n' "$w"; done
-printf '%b\n' "$(join_sep "${ROW1[@]}")"
-printf '%b'   "$(join_sep "${ROW2[@]}")"
+emit_row "$(join_sep "${ROW1_L[@]}")" "$(join_sep "${ROW1_R[@]}")"; printf '\n'
+emit_row "$(join_sep "${ROW2_L[@]}")" "$(join_sep "${ROW2_R[@]}")"
 for w in "${BOTTOM[@]}"; do printf '\n%s' "$w"; done

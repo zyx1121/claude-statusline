@@ -52,6 +52,12 @@
           "type": "object",
           "description": "Per-instance config passed to the component. Keys must match the component's config.schema; omitted keys fall back to schema defaults.",
           "default": {}
+        },
+        "align": {
+          "type": "string",
+          "description": "For segments (row1/row2): pin to the left group or the right group of the row, padded apart to fill the width. Ignored by line widgets.",
+          "enum": ["left", "right"],
+          "default": "left"
         }
       }
     }

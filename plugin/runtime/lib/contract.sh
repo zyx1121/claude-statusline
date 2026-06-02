@@ -32,10 +32,11 @@ extract_stdin_fields() {   # stdin = CC JSON
 }
 
 # profile_iter — flatten a profile's components[] into TSV rows, sorted by order.
-# Emits: id \t slot \t order \t cfg(compact JSON). Loader buckets by slot.
+# Emits: id \t slot \t order \t cfg(compact JSON) \t align(left|right). Loader buckets
+# by slot, and segments into a left/right group by align.
 profile_iter() {   # $1 = profile.json
   jq -r '.components | sort_by(.order // 0)[] |
-    [.id, .slot, ((.order // 0) | tostring), ((.config // {}) | tojson)] | @tsv' "$1" 2>/dev/null
+    [.id, .slot, ((.order // 0) | tostring), ((.config // {}) | tojson), (.align // "left")] | @tsv' "$1" 2>/dev/null
 }
 
 # cfg_to_flags — turn a config object into `--key value` CLI flags (scalars only).

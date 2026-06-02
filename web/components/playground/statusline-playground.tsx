@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  AlignLeft,
+  AlignRight,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -61,6 +63,7 @@ export interface PlaygroundProfile {
     id: string;
     slot?: string;
     order?: number;
+    align?: "left" | "right";
     config?: Record<string, unknown>;
   }>;
 }
@@ -69,6 +72,7 @@ interface BuilderItem {
   key: string;
   id: string;
   slot: Slot;
+  align?: "left" | "right";
   config?: Record<string, unknown>;
 }
 
@@ -167,7 +171,10 @@ export function StatuslinePlayground({
       if (idx < 0) return current;
       const item = current[idx];
       if (dir === "left" || dir === "right") {
-        const siblings = current.flatMap((it, i) => (it.slot === item.slot ? [i] : []));
+        const a = item.align ?? "left";
+        const siblings = current.flatMap((it, i) =>
+          it.slot === item.slot && (it.align ?? "left") === a ? [i] : [],
+        );
         const pos = siblings.indexOf(idx);
         const swap = dir === "left" ? pos - 1 : pos + 1;
         if (swap < 0 || swap >= siblings.length) return current;
@@ -184,6 +191,13 @@ export function StatuslinePlayground({
       next[idx] = { ...item, slot: family[nfi] };
       return next;
     });
+  }
+
+  function setAlign(key: string, align: "left" | "right") {
+    setSelectedProfile("custom");
+    setItems((current) =>
+      current.map((it) => (it.key === key ? { ...it, align } : it)),
+    );
   }
 
   function clearItems() {
@@ -248,6 +262,7 @@ export function StatuslinePlayground({
               octants={octants}
               onRemove={removeItem}
               onMove={moveItem}
+              onSetAlign={setAlign}
             />
           </div>
         </TerminalSurface>
@@ -346,12 +361,14 @@ function ComposedTerminal({
   octants,
   onRemove,
   onMove,
+  onSetAlign,
 }: {
   items: BuilderItem[];
   byId: Map<string, PlaygroundComponent>;
   octants: string;
   onRemove: (key: string) => void;
   onMove: (key: string, dir: "up" | "down" | "left" | "right") => void;
+  onSetAlign: (key: string, align: "left" | "right") => void;
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [fontSize, setFontSize] = useState(13);
@@ -434,31 +451,45 @@ function ComposedTerminal({
     const list = slotItems(slot);
     if (!list.length) return null;
     const fi = SEGMENT_FAMILY.indexOf(slot);
+    const left = list.filter((it) => (it.align ?? "left") !== "right");
+    const right = list.filter((it) => (it.align ?? "left") === "right");
+    const seg = (item: BuilderItem, i: number, count: number) => {
+      const component = byId.get(item.id);
+      if (!component) return null;
+      return (
+        <span key={item.key} className="inline-flex items-center">
+          {i > 0 ? (
+            <span className="select-none px-1 text-[rgb(128,140,158)]">·</span>
+          ) : null}
+          <EditableSegment
+            component={component}
+            align={item.align ?? "left"}
+            canLeft={i > 0}
+            canRight={i < count - 1}
+            canUp={fi > 0}
+            canDown={fi < SEGMENT_FAMILY.length - 1}
+            onLeft={() => onMove(item.key, "left")}
+            onRight={() => onMove(item.key, "right")}
+            onUp={() => onMove(item.key, "up")}
+            onDown={() => onMove(item.key, "down")}
+            onRemove={() => onRemove(item.key)}
+            onToggleAlign={() =>
+              onSetAlign(item.key, (item.align ?? "left") === "right" ? "left" : "right")
+            }
+          />
+        </span>
+      );
+    };
     return (
-      <div className="flex flex-wrap items-center whitespace-pre">
-        {list.map((item, i) => {
-          const component = byId.get(item.id);
-          if (!component) return null;
-          return (
-            <span key={item.key} className="inline-flex items-center">
-              {i > 0 ? (
-                <span className="select-none px-1 text-[rgb(128,140,158)]">·</span>
-              ) : null}
-              <EditableSegment
-                component={component}
-                canLeft={i > 0}
-                canRight={i < list.length - 1}
-                canUp={fi > 0}
-                canDown={fi < SEGMENT_FAMILY.length - 1}
-                onLeft={() => onMove(item.key, "left")}
-                onRight={() => onMove(item.key, "right")}
-                onUp={() => onMove(item.key, "up")}
-                onDown={() => onMove(item.key, "down")}
-                onRemove={() => onRemove(item.key)}
-              />
-            </span>
-          );
-        })}
+      <div className="flex w-full items-center whitespace-pre">
+        <span className="inline-flex items-center">
+          {left.map((it, i) => seg(it, i, left.length))}
+        </span>
+        {right.length ? (
+          <span className="ml-auto inline-flex items-center">
+            {right.map((it, i) => seg(it, i, right.length))}
+          </span>
+        ) : null}
       </div>
     );
   };
@@ -488,6 +519,8 @@ interface UnitProps {
   onLeft: () => void;
   onRight: () => void;
   onRemove: () => void;
+  align?: "left" | "right";
+  onToggleAlign?: () => void;
 }
 
 function EditableLine({
@@ -566,6 +599,8 @@ function UnitToolbar({
   onLeft,
   onRight,
   onRemove,
+  align,
+  onToggleAlign,
 }: { className?: string } & UnitProps) {
   return (
     <span
@@ -586,6 +621,18 @@ function UnitToolbar({
       <ToolButton label="Move to slot below" disabled={!canDown} onClick={onDown}>
         <ChevronDown className="size-3" />
       </ToolButton>
+      {onToggleAlign ? (
+        <ToolButton
+          label={align === "right" ? "Align left" : "Align right"}
+          onClick={onToggleAlign}
+        >
+          {align === "right" ? (
+            <AlignLeft className="size-3" />
+          ) : (
+            <AlignRight className="size-3" />
+          )}
+        </ToolButton>
+      ) : null}
       <ToolButton label="Remove" onClick={onRemove}>
         <X className="size-3" />
       </ToolButton>
@@ -696,6 +743,7 @@ function profileToItems(
         key: `${profile.name}-${component.id}-${index}`,
         id: component.id,
         slot: normalizeSlot(component.slot) ?? (def ? defaultSlot(def) : "row1"),
+        align: component.align === "right" ? "right" : "left",
         config: component.config,
       };
     });
@@ -720,6 +768,7 @@ function buildProfile(
         id: item.id,
         slot: item.slot,
         order: (index + 1) * 10,
+        ...(item.align === "right" ? { align: "right" as const } : {}),
         ...(item.config ? { config: item.config } : {}),
       })),
     ).filter((item) => byId.has(item.id)),

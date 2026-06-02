@@ -2,6 +2,8 @@
 # statusline/lib/core.sh — shared palette + render helpers, sourced once by the loader.
 # Components rely on these names (KEY/VAL/RESET, pct_color, fmt_countdown). Keep stable.
 
+shopt -s extglob   # vwidth's SGR-strip glob needs it
+
 # ANSI helpers
 RESET='\033[0m'
 BOLD='\033[1m'
@@ -55,4 +57,25 @@ join_sep() {
     if [ -z "$out" ]; then out="$p"; else out="${out}${SEP}${p}"; fi
   done
   printf '%s' "$out"
+}
+
+# Helper: visible width of an ANSI string — normalize escapes then strip SGR. CJK is
+# counted as 1 (a fair approximation for right-aligning the mostly-ASCII segment rows).
+vwidth() {
+  local s; printf -v s '%b' "$1"
+  s=${s//$'\e'\[*([0-9;])m/}
+  printf '%s' "${#s}"
+}
+
+# Helper: compose one segment row from a left group + a right group, padded apart to
+# fill $COLS. An empty right group prints the left group as-is (legacy left-align).
+emit_row() {   # $1=left (joined), $2=right (joined)
+  local l r lw rw gap
+  printf -v l '%b' "$1"
+  printf -v r '%b' "$2"
+  if [ -z "$r" ]; then printf '%s' "$l"; return; fi
+  lw=$(vwidth "$1"); rw=$(vwidth "$2")
+  if [ -z "$l" ]; then gap=$(( COLS - rw )); else gap=$(( COLS - lw - rw )); fi
+  [ "$gap" -lt 1 ] && gap=1
+  printf '%s%*s%s' "$l" "$gap" "" "$r"
 }
