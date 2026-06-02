@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Library,
   Plus,
@@ -157,20 +159,30 @@ export function StatuslinePlayground({
     setItems((current) => current.filter((item) => item.key !== key));
   }
 
-  // Reorder within a slot: swap with the previous/next sibling in the same slot.
-  function moveItem(key: string, dir: "up" | "down") {
+  // ← → reorder within the slot; ↑ ↓ move to the adjacent same-family slot
+  // (line widgets: top↔middle↔bottom; segments: row1↔row2).
+  function moveItem(key: string, dir: "up" | "down" | "left" | "right") {
     setSelectedProfile("custom");
     setItems((current) => {
       const idx = current.findIndex((it) => it.key === key);
       if (idx < 0) return current;
-      const slot = current[idx].slot;
-      const siblings = current.flatMap((it, i) => (it.slot === slot ? [i] : []));
-      const pos = siblings.indexOf(idx);
-      const swap = dir === "up" ? pos - 1 : pos + 1;
-      if (swap < 0 || swap >= siblings.length) return current;
-      const j = siblings[swap];
+      const item = current[idx];
+      if (dir === "left" || dir === "right") {
+        const siblings = current.flatMap((it, i) => (it.slot === item.slot ? [i] : []));
+        const pos = siblings.indexOf(idx);
+        const swap = dir === "left" ? pos - 1 : pos + 1;
+        if (swap < 0 || swap >= siblings.length) return current;
+        const j = siblings[swap];
+        const next = current.slice();
+        [next[idx], next[j]] = [next[j], next[idx]];
+        return next;
+      }
+      const family = slotFamily(item.slot);
+      const fi = family.indexOf(item.slot);
+      const nfi = dir === "up" ? fi - 1 : fi + 1;
+      if (nfi < 0 || nfi >= family.length) return current;
       const next = current.slice();
-      [next[idx], next[j]] = [next[j], next[idx]];
+      next[idx] = { ...item, slot: family[nfi] };
       return next;
     });
   }
@@ -305,6 +317,31 @@ export function StatuslinePlayground({
 
 // ---------- composed terminal (faithful render) ----------
 
+// Slot families for ↑↓ movement: line widgets cycle top/middle/bottom, segments row1/row2.
+const LINE_FAMILY: Slot[] = ["top", "middle", "bottom"];
+const SEGMENT_FAMILY: Slot[] = ["row1", "row2"];
+function slotFamily(slot: Slot): Slot[] {
+  return SEGMENT_FAMILY.includes(slot) ? SEGMENT_FAMILY : LINE_FAMILY;
+}
+
+// Visible width of an ANSI line (strip SGR, count CJK/wide glyphs as 2) — drives font fit.
+function visibleWidth(s: string): number {
+  let w = 0;
+  for (const ch of s.replace(/\x1b\[[0-9;]*m/g, "")) {
+    const cp = ch.codePointAt(0) ?? 0;
+    const wide =
+      (cp >= 0x1100 && cp <= 0x115f) ||
+      (cp >= 0x2e80 && cp <= 0xa4cf) ||
+      (cp >= 0xac00 && cp <= 0xd7a3) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0xff00 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) ||
+      cp >= 0x1f300;
+    w += wide ? 2 : 1;
+  }
+  return w;
+}
+
 function ComposedTerminal({
   items,
   byId,
@@ -318,11 +355,52 @@ function ComposedTerminal({
   octants: string;
   rule: boolean;
   onRemove: (key: string) => void;
-  onMove: (key: string, dir: "up" | "down") => void;
+  onMove: (key: string, dir: "up" | "down" | "left" | "right") => void;
 }) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = useState(13);
+
+  // Fixed terminal box, content scales to fit: widest text line drives the font size
+  // (mosaic widgets render to canvas and self-fit, so they're skipped; a segment row's
+  // width is the sum of its segments + separators).
+  const maxCols = useMemo(() => {
+    let m = 24;
+    const widthOf = (c: PlaygroundComponent) =>
+      visibleWidth(((c.frames?.length ? c.frames[0] : c.preview) || "").split("\n")[0] || "");
+    for (const it of items) {
+      const c = byId.get(it.id);
+      if (!c || c.mosaic || it.slot === "row1" || it.slot === "row2") continue;
+      m = Math.max(m, widthOf(c));
+    }
+    for (const slot of ["row1", "row2"] as Slot[]) {
+      let w = 0;
+      items
+        .filter((i) => i.slot === slot)
+        .forEach((it, idx) => {
+          const c = byId.get(it.id);
+          if (c) w += widthOf(c) + (idx ? 3 : 0);
+        });
+      m = Math.max(m, w);
+    }
+    return m;
+  }, [items, byId]);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const fit = () => {
+      const w = el.clientWidth - 8;
+      setFontSize(Math.max(8, Math.min(18, w / (maxCols * 0.6))));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [maxCols]);
+
   if (!items.length) {
     return (
-      <div className="flex h-full min-h-[16rem] items-center justify-center px-6 text-center font-mono text-xs text-neutral-600">
+      <div className="flex h-full min-h-[12rem] items-center justify-center px-6 text-center font-mono text-xs text-neutral-600">
         Pick a profile above, or add components from the library — they compose
         here exactly as the status line renders them.
       </div>
@@ -333,6 +411,7 @@ function ComposedTerminal({
 
   const lineSlot = (slot: Slot) => {
     const list = slotItems(slot);
+    const fi = LINE_FAMILY.indexOf(slot);
     return list.map((item, i) => {
       const component = byId.get(item.id);
       if (!component) return null;
@@ -341,8 +420,12 @@ function ComposedTerminal({
           key={item.key}
           component={component}
           octants={octants}
-          canUp={i > 0}
-          canDown={i < list.length - 1}
+          canLeft={i > 0}
+          canRight={i < list.length - 1}
+          canUp={fi > 0}
+          canDown={fi < LINE_FAMILY.length - 1}
+          onLeft={() => onMove(item.key, "left")}
+          onRight={() => onMove(item.key, "right")}
           onUp={() => onMove(item.key, "up")}
           onDown={() => onMove(item.key, "down")}
           onRemove={() => onRemove(item.key)}
@@ -354,8 +437,9 @@ function ComposedTerminal({
   const segmentRow = (slot: Slot) => {
     const list = slotItems(slot);
     if (!list.length) return null;
+    const fi = SEGMENT_FAMILY.indexOf(slot);
     return (
-      <div className="flex flex-wrap items-center gap-y-1 whitespace-pre">
+      <div className="flex flex-wrap items-center whitespace-pre">
         {list.map((item, i) => {
           const component = byId.get(item.id);
           if (!component) return null;
@@ -366,8 +450,12 @@ function ComposedTerminal({
               ) : null}
               <EditableSegment
                 component={component}
-                canUp={i > 0}
-                canDown={i < list.length - 1}
+                canLeft={i > 0}
+                canRight={i < list.length - 1}
+                canUp={fi > 0}
+                canDown={fi < SEGMENT_FAMILY.length - 1}
+                onLeft={() => onMove(item.key, "left")}
+                onRight={() => onMove(item.key, "right")}
                 onUp={() => onMove(item.key, "up")}
                 onDown={() => onMove(item.key, "down")}
                 onRemove={() => onRemove(item.key)}
@@ -382,7 +470,11 @@ function ComposedTerminal({
   const hasTop = slotItems("top").length > 0;
 
   return (
-    <div className="space-y-1 font-mono text-[12px] leading-[1.55] text-neutral-300">
+    <div
+      ref={bodyRef}
+      className="font-mono text-neutral-300"
+      style={{ fontSize: `${fontSize}px`, lineHeight: 1.3 }}
+    >
       {lineSlot("top")}
       {rule && hasTop ? <div className="my-1 h-px w-full bg-white/10" /> : null}
       {lineSlot("middle")}
@@ -396,8 +488,12 @@ function ComposedTerminal({
 interface UnitProps {
   canUp: boolean;
   canDown: boolean;
+  canLeft: boolean;
+  canRight: boolean;
   onUp: () => void;
   onDown: () => void;
+  onLeft: () => void;
+  onRight: () => void;
   onRemove: () => void;
 }
 
@@ -413,7 +509,7 @@ function EditableLine({
   const rows = isMosaic ? [] : parseCells((text ?? "").replace(/\n+$/, ""));
 
   return (
-    <div className="group relative w-full rounded px-1 py-0.5 transition-colors hover:bg-white/[0.04]">
+    <div className="group relative w-full rounded px-1 transition-colors hover:bg-white/[0.04]">
       {isMosaic ? (
         <MosaicCanvas frames={component.frames ?? []} octants={octants} />
       ) : rows.length ? (
@@ -440,7 +536,7 @@ function EditableSegment({
   const cells = parseCells(text.replace(/\n+$/, ""))[0] ?? [];
 
   return (
-    <span className="group relative inline-flex items-center whitespace-pre rounded px-1.5 py-0.5 transition-colors hover:bg-white/[0.06]">
+    <span className="group relative inline-flex items-center whitespace-pre rounded px-1.5 transition-colors hover:bg-white/[0.06]">
       {cells.length ? cellSpans(cells, 0) : <span className="text-neutral-600">{component.id}</span>}
       <UnitToolbar className="left-0 bottom-full mb-0.5" {...edit} />
     </span>
@@ -470,8 +566,12 @@ function UnitToolbar({
   className,
   canUp,
   canDown,
+  canLeft,
+  canRight,
   onUp,
   onDown,
+  onLeft,
+  onRight,
   onRemove,
 }: { className?: string } & UnitProps) {
   return (
@@ -481,10 +581,16 @@ function UnitToolbar({
         className,
       )}
     >
-      <ToolButton label="Move earlier" disabled={!canUp} onClick={onUp}>
+      <ToolButton label="Move left" disabled={!canLeft} onClick={onLeft}>
+        <ChevronLeft className="size-3" />
+      </ToolButton>
+      <ToolButton label="Move right" disabled={!canRight} onClick={onRight}>
+        <ChevronRight className="size-3" />
+      </ToolButton>
+      <ToolButton label="Move to slot above" disabled={!canUp} onClick={onUp}>
         <ChevronUp className="size-3" />
       </ToolButton>
-      <ToolButton label="Move later" disabled={!canDown} onClick={onDown}>
+      <ToolButton label="Move to slot below" disabled={!canDown} onClick={onDown}>
         <ChevronDown className="size-3" />
       </ToolButton>
       <ToolButton label="Remove" onClick={onRemove}>
