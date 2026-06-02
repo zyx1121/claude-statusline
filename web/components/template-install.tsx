@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-import { cn } from "@/lib/utils";
-import { CopyButton } from "@/components/copy-button";
+import { CopyCommand } from "@/components/ui/copy-command";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 /**
  * Two install paths per template, toggled client-side: a `curl … | bash`
@@ -26,35 +26,19 @@ export function TemplateInstall({
       : { text: claude, hint: labels.claudeHint };
 
   return (
-    <div className="rounded-lg border">
-      <div className="flex border-b border-border/60" role="tablist">
-        {(["shell", "claude"] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            aria-selected={tab === k}
-            onClick={() => setTab(k)}
-            className={cn(
-              "px-3 py-2 text-xs font-medium transition-colors",
-              tab === k
-                ? "border-b-2 border-foreground text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {k === "shell" ? labels.shell : labels.claude}
-          </button>
-        ))}
-      </div>
-      <div className="space-y-2 p-3">
-        <p className="text-xs text-muted-foreground">{active.hint}</p>
-        <div className="flex items-start gap-2 rounded-md border bg-muted/40 pl-3 pr-1.5">
-          <pre className="flex-1 overflow-x-auto whitespace-pre-wrap break-words py-2 font-mono text-xs leading-relaxed text-foreground/90">
-            {active.text}
-          </pre>
-          <CopyButton value={active.text} className="mt-1.5" />
-        </div>
-      </div>
+    <div className="space-y-3">
+      <SegmentedControl
+        ariaLabel="Install method"
+        value={tab}
+        onValueChange={(value) => setTab(value as "shell" | "claude")}
+        options={[
+          { value: "shell", label: labels.shell },
+          { value: "claude", label: labels.claude },
+        ]}
+        className="[&_button]:h-7 [&_button]:text-xs"
+      />
+      <p className="text-xs text-foreground/60">{active.hint}</p>
+      <CopyCommand value={active.text} prompt="" multiline className="text-xs" />
     </div>
   );
 }

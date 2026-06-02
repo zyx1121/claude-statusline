@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 /**
  * Renders component preview/animation frames two ways:
@@ -31,7 +31,6 @@ interface Cell {
   bg: string | null;
 }
 
-// eslint-disable-next-line no-control-regex
 const SGR = /\x1b\[([0-9;]*)m/g;
 
 function parseCells(input: string): Cell[][] {
@@ -131,7 +130,7 @@ export function MosaicPreview({
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [idx, setIdx] = useState(0);
-  const list = frames.length ? frames : [""];
+  const list = useMemo(() => (frames.length ? frames : [""]), [frames]);
   useEffect(() => {
     if (list.length < 2) return;
     const id = setInterval(() => setIdx((n) => (n + 1) % list.length), intervalMs);
@@ -141,7 +140,7 @@ export function MosaicPreview({
     if (ref.current) drawMosaic(ref.current, list[idx % list.length], invTable(octants), px);
   }, [idx, list, octants, px]);
   return (
-    <div className={"overflow-x-auto rounded-md border border-border/60 bg-[#0c0d12] p-2 " + className}>
+    <div className={"corner-token overflow-x-auto rounded-xl bg-[#0c0d12] p-2 " + className}>
       <canvas ref={ref} className="block h-auto w-full max-w-full [image-rendering:pixelated]" />
     </div>
   );
@@ -229,7 +228,7 @@ export function TerminalDemo({
   return (
     <div
       className={
-        "overflow-hidden rounded-xl border border-border/60 bg-[#0c0d12] shadow-2xl " + className
+        "corner-token overflow-hidden rounded-2xl bg-[#0c0d12] " + className
       }
     >
       <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
@@ -295,7 +294,7 @@ function TextFrame({ ansi }: { ansi: string }) {
 }
 
 const TEXT_BOX =
-  "overflow-x-auto rounded-md border border-border/60 bg-[#0c0d12] px-3 py-2 font-mono text-[11px] leading-[1.4] text-neutral-300 ";
+  "corner-token overflow-x-auto rounded-xl bg-[#0c0d12] px-3 py-2 font-mono text-[11px] leading-[1.4] text-neutral-300 ";
 
 /** Static one-frame text preview (segments). */
 export function Preview({ ansi, className = "" }: { ansi: string; className?: string }) {
@@ -318,7 +317,10 @@ export function AnimatedPreview({
   className?: string;
   intervalMs?: number;
 }) {
-  const list = frames && frames.length >= 2 ? frames : null;
+  const list = useMemo(
+    () => (frames && frames.length >= 2 ? frames : null),
+    [frames],
+  );
   const [i, setI] = useState(0);
   useEffect(() => {
     if (!list) return;

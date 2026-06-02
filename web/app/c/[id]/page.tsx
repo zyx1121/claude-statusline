@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Globe, KeyRound, ShieldCheck, User } from "lucide-react";
+import { ArrowLeft, User } from "lucide-react";
 import Markdown from "react-markdown";
 
 import {
@@ -10,19 +10,15 @@ import {
   localizedName,
   localizedDescription,
   localizedReadme,
-  type Component,
 } from "@/lib/registry";
-import { getDict, getLocale, type Dict } from "@/lib/i18n";
+import { getDict, getLocale } from "@/lib/i18n";
 import { MosaicPreview, AnimatedPreview } from "@/components/ansi";
 import { cn } from "@/lib/utils";
+import { Surface } from "@/components/blocks/surface";
+import { SafetyNotice } from "@/components/registry/safety-notice";
+import { TypeBadge } from "@/components/registry/type-badge";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { CopyCommand } from "@/components/ui/copy-command";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -32,7 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CopyButton } from "@/components/copy-button";
 
 // Built-ins are pre-rendered from the snapshot; federated components (added to the
 // registry by PR) render on-demand and are revalidated. The locale cookie makes
@@ -86,7 +81,7 @@ export default async function ComponentPage({
     <main className="w-full py-10 lg:py-16">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-foreground/60 transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
         {t.detail.back}
@@ -98,14 +93,17 @@ export default async function ComponentPage({
             {localizedName(component, locale)}
           </h1>
           {component.version ? (
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-sm text-muted-foreground">
+            <code className="rounded-md bg-block px-1.5 py-0.5 font-mono text-sm text-foreground/60">
               v{component.version}
             </code>
           ) : null}
-          <TypeBadge type={component.type} t={t} />
+          <TypeBadge
+            type={component.type}
+            labels={{ segment: t.badges.segment, line: t.badges.line }}
+          />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-foreground/60">
           {github ? (
             <a
               href={`https://github.com/${github}`}
@@ -124,7 +122,7 @@ export default async function ComponentPage({
         </div>
 
         {localizedDescription(component, locale) ? (
-          <p className="max-w-prose text-pretty text-base text-muted-foreground">
+          <p className="max-w-prose text-pretty text-base text-foreground/60">
             {localizedDescription(component, locale)}
           </p>
         ) : null}
@@ -143,38 +141,36 @@ export default async function ComponentPage({
 
       {/* Install */}
       <section className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t.detail.enableTitle}</CardTitle>
-            <CardDescription>
+        <Surface className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-base font-medium">{t.detail.enableTitle}</h2>
+            <p className="text-sm text-foreground/60">
               {t.detail.enableDescPre}{" "}
               <code className="font-mono">{component.id}</code> {t.detail.enableDescPost}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CommandLine value={install} label={`Copy ${install}`} />
-          </CardContent>
-        </Card>
+            </p>
+          </div>
+          <CopyCommand value={install} copyLabel={`Copy ${install}`} />
+        </Surface>
       </section>
 
       {/* Safety story */}
       <section className="mt-6">
-        <SafetyBanner
+        <SafetyNotice
           needsNetwork={needsNetwork}
           needsSecrets={needsSecrets}
           hosts={networkHosts}
-          t={t}
+          labels={t.detail.safety}
         />
       </section>
 
       {/* Manifest facts */}
       <section className="mt-10">
         <h2 className="text-xl font-semibold tracking-tight">{t.detail.manifest}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-foreground/60">
           {t.detail.manifestDesc}{" "}
           <code className="font-mono">component.json</code>.
         </p>
-        <div className="mt-4 rounded-lg border">
+        <div className="mt-4">
           <Table>
             <TableBody>
               <Fact label={t.detail.facts.runtime}>
@@ -188,7 +184,7 @@ export default async function ComponentPage({
               <Fact label={t.detail.facts.type}>
                 <span>
                   <code className="font-mono">{component.type}</code>
-                  <span className="ml-2 text-xs text-muted-foreground">
+                  <span className="ml-2 text-xs text-foreground/60">
                     {component.type === "segment"
                       ? t.detail.typeHint.segment
                       : component.type === "line"
@@ -259,11 +255,11 @@ export default async function ComponentPage({
       {configEntries.length > 0 ? (
         <section className="mt-10">
           <h2 className="text-xl font-semibold tracking-tight">{t.detail.config}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-foreground/60">
             {t.detail.configDescPre}{" "}
             <code className="font-mono">/statusline:configure {component.id}</code>.
           </p>
-          <div className="mt-4 rounded-lg border">
+          <div className="mt-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -280,7 +276,7 @@ export default async function ComponentPage({
                       {key}
                     </TableCell>
                     <TableCell className="align-top">
-                      <code className="font-mono text-xs text-muted-foreground">
+                      <code className="font-mono text-xs text-foreground/60">
                         {field.enum
                           ? field.enum.map((v) => String(v)).join(" | ")
                           : field.type ?? "—"}
@@ -291,7 +287,7 @@ export default async function ComponentPage({
                         {formatDefault(field.default)}
                       </code>
                     </TableCell>
-                    <TableCell className="align-top text-sm text-muted-foreground">
+                    <TableCell className="align-top text-sm text-foreground/60">
                       {field.desc ?? ""}
                     </TableCell>
                   </TableRow>
@@ -331,81 +327,6 @@ function asList(v: string[] | boolean | undefined): string[] {
   return Array.isArray(v) ? v : [];
 }
 
-function TypeBadge({ type, t }: { type: Component["type"]; t: Dict }) {
-  const isSegment = type === "segment";
-  return (
-    <Badge variant={isSegment ? "default" : "secondary"}>
-      {isSegment ? t.badges.segment : t.badges.line}
-    </Badge>
-  );
-}
-
-function SafetyBanner({
-  needsNetwork,
-  needsSecrets,
-  hosts,
-  t,
-}: {
-  needsNetwork: boolean;
-  needsSecrets: boolean;
-  hosts: string[];
-  t: Dict;
-}) {
-  if (!needsNetwork && !needsSecrets) {
-    return (
-      <div className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-emerald-500" />
-        <span>
-          <span className="font-medium text-foreground">{t.detail.safety.noneTitle}</span>{" "}
-          <span className="text-muted-foreground">{t.detail.safety.noneBody}</span>
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border px-4 py-3 text-sm">
-      {needsNetwork ? (
-        <span className="flex items-start gap-2.5">
-          <Globe className="mt-0.5 size-4 shrink-0 text-amber-500" />
-          <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">{t.detail.safety.networkTitle}</span>{" "}
-            {hosts.length > 0 ? (
-              <>
-                {t.detail.safety.networkTo}{" "}
-                <code className="font-mono text-foreground">{hosts.join(", ")}</code>
-              </>
-            ) : null}
-            . {t.detail.safety.networkBody}
-          </span>
-        </span>
-      ) : null}
-      {needsSecrets ? (
-        <span className="flex items-start gap-2.5">
-          <KeyRound className="mt-0.5 size-4 shrink-0 text-amber-500" />
-          <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">{t.detail.safety.secretsTitle}</span>{" "}
-            {t.detail.safety.secretsBodyPre}{" "}
-            <code className="font-mono">/statusline:configure</code>.
-          </span>
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function CommandLine({ value, label }: { value: string; label?: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-md border bg-muted/40 pl-3 pr-1.5">
-      <code className="flex-1 overflow-x-auto whitespace-nowrap py-2 font-mono text-sm">
-        <span className="select-none text-muted-foreground">$ </span>
-        {value}
-      </code>
-      <CopyButton value={value} label={label} />
-    </div>
-  );
-}
-
 function Fact({
   label,
   children,
@@ -415,7 +336,7 @@ function Fact({
 }) {
   return (
     <TableRow>
-      <TableCell className="w-44 align-top font-medium text-muted-foreground">
+      <TableCell className="w-44 align-top font-medium text-foreground/60">
         {label}
       </TableCell>
       <TableCell className="align-top">{children}</TableCell>
@@ -424,7 +345,7 @@ function Fact({
 }
 
 function Muted({ children }: { children: React.ReactNode }) {
-  return <span className="text-muted-foreground">{children}</span>;
+  return <span className="text-foreground/60">{children}</span>;
 }
 
 function BadgeList({
@@ -473,7 +394,7 @@ const markdownComponents = {
     <h3 className="mt-6 mb-2 text-lg font-semibold tracking-tight" {...props} />
   ),
   p: (props: React.ComponentProps<"p">) => (
-    <p className="my-3 leading-7 text-muted-foreground" {...props} />
+    <p className="my-3 leading-7 text-foreground/60" {...props} />
   ),
   a: (props: React.ComponentProps<"a">) => (
     <a
@@ -485,13 +406,13 @@ const markdownComponents = {
   ),
   ul: (props: React.ComponentProps<"ul">) => (
     <ul
-      className="my-3 ml-6 list-disc space-y-1.5 text-muted-foreground marker:text-muted-foreground/50"
+      className="my-3 ml-6 list-disc space-y-1.5 text-foreground/60 marker:text-foreground/40"
       {...props}
     />
   ),
   ol: (props: React.ComponentProps<"ol">) => (
     <ol
-      className="my-3 ml-6 list-decimal space-y-1.5 text-muted-foreground marker:text-muted-foreground/50"
+      className="my-3 ml-6 list-decimal space-y-1.5 text-foreground/60 marker:text-foreground/40"
       {...props}
     />
   ),
@@ -500,37 +421,37 @@ const markdownComponents = {
   ),
   code: (props: React.ComponentProps<"code">) => (
     <code
-      className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground"
+      className="rounded-md bg-block px-1.5 py-0.5 font-mono text-[0.85em] text-foreground"
       {...props}
     />
   ),
   pre: (props: React.ComponentProps<"pre">) => (
     <pre
-      className="my-4 overflow-x-auto rounded-lg border bg-muted/40 p-4 font-mono text-sm leading-relaxed [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[0.85em]"
+      className="corner-token my-4 overflow-x-auto rounded-xl bg-block p-4 font-mono text-sm leading-relaxed [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-[0.85em]"
       {...props}
     />
   ),
   blockquote: (props: React.ComponentProps<"blockquote">) => (
     <blockquote
-      className="my-4 border-l-2 border-border pl-4 italic text-muted-foreground"
+      className="my-4 border-l-2 border-foreground/20 pl-4 italic text-foreground/60"
       {...props}
     />
   ),
   hr: (props: React.ComponentProps<"hr">) => (
-    <hr className="my-8 border-border" {...props} />
+    <hr className="my-8 border-foreground/10" {...props} />
   ),
   table: (props: React.ComponentProps<"table">) => (
-    <div className="my-4 w-full overflow-x-auto rounded-lg border">
+    <div className="corner-token my-4 w-full overflow-x-auto rounded-xl bg-block">
       <table className="w-full text-sm" {...props} />
     </div>
   ),
   th: (props: React.ComponentProps<"th">) => (
     <th
-      className="border-b px-3 py-2 text-left font-medium text-foreground"
+      className="border-b border-foreground/10 px-3 py-2 text-left font-medium text-foreground"
       {...props}
     />
   ),
   td: (props: React.ComponentProps<"td">) => (
-    <td className="border-b px-3 py-2 text-muted-foreground" {...props} />
+    <td className="border-b border-foreground/10 px-3 py-2 text-foreground/60" {...props} />
   ),
 };

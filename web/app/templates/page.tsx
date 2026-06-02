@@ -1,5 +1,3 @@
-import { Layers } from "lucide-react";
-
 import {
   getProfiles,
   getComponents,
@@ -11,9 +9,8 @@ import {
 } from "@/lib/registry";
 import { getDict, getLocale, type Dict, type Locale } from "@/lib/i18n";
 import { claudePrompt } from "@/lib/install";
-import { TemplateInstall } from "@/components/template-install";
+import { TemplateCard } from "@/components/templates/template-card";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 
 export const revalidate = 600;
 
@@ -47,17 +44,25 @@ export default async function TemplatesPage() {
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           {t.templates.title}
         </h1>
-        <p className="max-w-2xl text-pretty text-muted-foreground">{t.templates.intro}</p>
+        <p className="max-w-2xl text-pretty text-foreground/60">
+          {t.templates.intro}
+        </p>
       </header>
 
       <section className="mt-10 space-y-8">
         {ordered.map((profile) => (
           <TemplateCard
             key={profile.name}
-            profile={profile}
-            components={components}
-            t={t}
-            locale={locale}
+            view={toTemplateCardView(profile, components, t, locale)}
+            labels={{
+              components: t.templates.components,
+              layout: t.templates.layout,
+              install: t.templates.install,
+              tabShell: t.templates.tabShell,
+              tabClaude: t.templates.tabClaude,
+              shellHint: t.templates.shellHint,
+              claudeHint: t.templates.claudeHint,
+            }}
           />
         ))}
       </section>
@@ -65,17 +70,12 @@ export default async function TemplatesPage() {
   );
 }
 
-function TemplateCard({
-  profile,
-  components,
-  t,
-  locale,
-}: {
-  profile: Profile;
-  components: Component[];
-  t: Dict;
-  locale: Locale;
-}) {
+function toTemplateCardView(
+  profile: Profile,
+  components: Component[],
+  t: Dict,
+  locale: Locale,
+) {
   const byId = new Map(components.map((c) => [c.id, c]));
   const label = (inst: ProfileInstance) => {
     const c = byId.get(inst.id);
@@ -98,64 +98,20 @@ function TemplateCard({
   const shellOneLiner = `curl -fsSL ${SITE_URL}/install/${profile.name}.sh | bash`;
   const prompt = claudePrompt(profile);
 
-  return (
-    <Card className="flex flex-col gap-5 p-5">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <Layers className="size-4 text-muted-foreground" />
-        <span className="font-mono text-base font-semibold">{profile.name}</span>
-        <Badge variant="secondary" className="text-[10px]">
-          {profile.components.length} {t.templates.components}
-        </Badge>
-      </div>
-
-      {profile.description ? (
-        <p className="text-sm text-muted-foreground">{profile.description}</p>
-      ) : null}
-
-      {/* Layout — one row per slot */}
-      <div>
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t.templates.layout}
-        </h3>
-        <div className="overflow-hidden rounded-lg border border-border/60 font-mono text-xs">
-          {SLOT_ORDER.filter((s) => bySlot.has(s)).map((slot, i) => (
-            <div
-              key={slot}
-              className={
-                "flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-baseline sm:gap-3" +
-                (i > 0 ? " border-t border-border/60" : "")
-              }
-            >
-              <span className="w-16 shrink-0 text-muted-foreground/70">
-                {t.templates.slots[slot]}
-              </span>
-              <span className="flex flex-wrap gap-x-2 gap-y-1 text-foreground/90">
-                {bySlot
-                  .get(slot)!
-                  .map((inst) => label(inst))
-                  .join("  ·  ")}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Install */}
-      <div>
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t.templates.install}
-        </h3>
-        <TemplateInstall
-          shell={shellOneLiner}
-          claude={prompt}
-          labels={{
-            shell: t.templates.tabShell,
-            claude: t.templates.tabClaude,
-            shellHint: t.templates.shellHint,
-            claudeHint: t.templates.claudeHint,
-          }}
-        />
-      </div>
-    </Card>
-  );
+  return {
+    name: profile.name,
+    description: profile.description,
+    componentCount: profile.components.length,
+    layoutRows: SLOT_ORDER.filter((s) => bySlot.has(s)).map((slot) => ({
+      slot: t.templates.slots[slot],
+      components: bySlot
+        .get(slot)!
+        .map((inst) => label(inst))
+        .join("  ·  "),
+    })),
+    install: {
+      shell: shellOneLiner,
+      claude: prompt,
+    },
+  };
 }
