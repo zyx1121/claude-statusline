@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
+import { TerminalSurface } from "@/components/blocks/terminal-surface";
+import { cn } from "@/lib/utils";
+
 /**
  * Renders component preview/animation frames two ways:
  *
@@ -140,9 +143,9 @@ export function MosaicPreview({
     if (ref.current) drawMosaic(ref.current, list[idx % list.length], invTable(octants), px);
   }, [idx, list, octants, px]);
   return (
-    <div className={"corner-token overflow-x-auto rounded-xl bg-[#0c0d12] p-2 " + className}>
+    <TerminalSurface className={cn("overflow-x-auto p-2", className)}>
       <canvas ref={ref} className="block h-auto w-full max-w-full [image-rendering:pixelated]" />
-    </div>
+    </TerminalSurface>
   );
 }
 
@@ -226,11 +229,7 @@ export function TerminalDemo({
   };
 
   return (
-    <div
-      className={
-        "corner-token overflow-hidden rounded-2xl bg-[#0c0d12] " + className
-      }
-    >
+    <TerminalSurface size="lg" className={cn("overflow-hidden", className)}>
       <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
         <span className="size-3 rounded-full bg-[#ff5f57]" />
         <span className="size-3 rounded-full bg-[#febc2e]" />
@@ -253,7 +252,7 @@ export function TerminalDemo({
           {post.map((l, i) => Row(l, `post-${i}`))}
         </div>
       </div>
-    </div>
+    </TerminalSurface>
   );
 }
 
@@ -293,15 +292,17 @@ function TextFrame({ ansi }: { ansi: string }) {
   );
 }
 
-const TEXT_BOX =
-  "corner-token overflow-x-auto rounded-xl bg-[#0c0d12] px-3 py-2 font-mono text-[11px] leading-[1.4] text-neutral-300 ";
-
 /** Static one-frame text preview (segments). */
 export function Preview({ ansi, className = "" }: { ansi: string; className?: string }) {
   return (
-    <div className={TEXT_BOX + className}>
+    <TerminalSurface
+      className={cn(
+        "overflow-x-auto px-3 py-2 font-mono text-[11px] leading-[1.4]",
+        className,
+      )}
+    >
       <TextFrame ansi={ansi} />
-    </div>
+    </TerminalSurface>
   );
 }
 
@@ -328,8 +329,13 @@ export function AnimatedPreview({
     return () => clearInterval(id);
   }, [list, intervalMs]);
   return (
-    <div className={TEXT_BOX + className}>
+    <TerminalSurface
+      className={cn(
+        "overflow-x-auto px-3 py-2 font-mono text-[11px] leading-[1.4]",
+        className,
+      )}
+    >
       <TextFrame ansi={list ? list[i % list.length] : fallback} />
-    </div>
+    </TerminalSurface>
   );
 }
