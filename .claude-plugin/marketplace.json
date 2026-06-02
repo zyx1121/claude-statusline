@@ -3,7 +3,7 @@
   "owner": { "name": "zyx1121", "url": "https://github.com/zyx1121" },
   "metadata": {
     "description": "A Claude-native, modular status line and its component marketplace.",
-    "version": "0.1.6"
+    "version": "0.1.7"
   },
   "plugins": [
     {
