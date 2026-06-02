@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  AlignLeft,
-  AlignRight,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Library,
-  Plus,
-  Search,
-  Sparkles,
-  Terminal,
-  X,
-} from "lucide-react";
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+  type ReactNode,
+} from "react";
+import { Library, Plus, Search, Sparkles, Terminal, X } from "lucide-react";
 
 import {
   cellSpans,
@@ -97,6 +92,7 @@ export function StatuslinePlayground({
   );
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"all" | "segment" | "line">("all");
+  const [dragKey, setDragKey] = useState<string | null>(null);
 
   const selectedIds = useMemo(() => new Set(items.map((item) => item.id)), [items]);
   const missingSlots = useMemo(
@@ -162,42 +158,31 @@ export function StatuslinePlayground({
     setItems((current) => current.filter((item) => item.key !== key));
   }
 
-  // ← → reorder within the slot; ↑ ↓ move to the adjacent same-family slot
-  // (line widgets: top↔middle↔bottom; segments: row1↔row2).
-  function moveItem(key: string, dir: "up" | "down" | "left" | "right") {
+  // Drag-to-reorder: drop `key` into `slot` at `index` within its (slot, align)
+  // group. Lines ignore align (the whole slot is one group); segments split into
+  // left/right groups, so the same call re-aligns a dragged segment too. `index`
+  // is counted within the destination group, after the dragged item is removed.
+  function moveTo(key: string, slot: Slot, align: "left" | "right", index: number) {
     setSelectedProfile("custom");
     setItems((current) => {
-      const idx = current.findIndex((it) => it.key === key);
-      if (idx < 0) return current;
-      const item = current[idx];
-      if (dir === "left" || dir === "right") {
-        const a = item.align ?? "left";
-        const siblings = current.flatMap((it, i) =>
-          it.slot === item.slot && (it.align ?? "left") === a ? [i] : [],
-        );
-        const pos = siblings.indexOf(idx);
-        const swap = dir === "left" ? pos - 1 : pos + 1;
-        if (swap < 0 || swap >= siblings.length) return current;
-        const j = siblings[swap];
-        const next = current.slice();
-        [next[idx], next[j]] = [next[j], next[idx]];
-        return next;
-      }
-      const family = slotFamily(item.slot);
-      const fi = family.indexOf(item.slot);
-      const nfi = dir === "up" ? fi - 1 : fi + 1;
-      if (nfi < 0 || nfi >= family.length) return current;
-      const next = current.slice();
-      next[idx] = { ...item, slot: family[nfi] };
+      const at = current.findIndex((it) => it.key === key);
+      if (at < 0) return current;
+      const moved = { ...current[at], slot, align };
+      const rest = current.filter((it) => it.key !== key);
+      const isLine = LINE_FAMILY.includes(slot);
+      const inGroup = (it: BuilderItem) =>
+        it.slot === slot && (isLine || (it.align ?? "left") === align);
+      const groupAt = rest.flatMap((it, i) => (inGroup(it) ? [i] : []));
+      const insertAt =
+        index >= groupAt.length
+          ? groupAt.length
+            ? groupAt[groupAt.length - 1] + 1
+            : rest.length
+          : groupAt[index];
+      const next = rest.slice();
+      next.splice(insertAt, 0, moved);
       return next;
     });
-  }
-
-  function setAlign(key: string, align: "left" | "right") {
-    setSelectedProfile("custom");
-    setItems((current) =>
-      current.map((it) => (it.key === key ? { ...it, align } : it)),
-    );
   }
 
   function clearItems() {
@@ -260,15 +245,38 @@ export function StatuslinePlayground({
               items={items}
               byId={byId}
               octants={octants}
-              onRemove={removeItem}
-              onMove={moveItem}
-              onSetAlign={setAlign}
+              dragKey={dragKey}
+              onDragStart={setDragKey}
+              onDragEnd={() => setDragKey(null)}
+              onMoveTo={moveTo}
             />
           </div>
         </TerminalSurface>
       </section>
 
-      <aside className="flex h-[42dvh] min-h-0 shrink-0 border-t border-foreground/10 bg-block/70 lg:h-auto lg:w-[440px] lg:flex-col lg:border-l lg:border-t-0">
+      <aside
+        onDragOver={(e) => {
+          if (dragKey) e.preventDefault();
+        }}
+        onDrop={(e) => {
+          if (!dragKey) return;
+          e.preventDefault();
+          removeItem(dragKey);
+          setDragKey(null);
+        }}
+        className={cn(
+          "relative flex h-[42dvh] min-h-0 shrink-0 border-t border-foreground/10 bg-block/70 transition-colors lg:h-auto lg:w-[440px] lg:flex-col lg:border-l lg:border-t-0",
+          dragKey && "bg-red-500/[0.04]",
+        )}
+      >
+        {dragKey ? (
+          <div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-red-500/40 bg-background/40 backdrop-blur-[1px]">
+            <span className="flex items-center gap-1.5 font-mono text-sm text-red-400/90">
+              <X className="size-4" />
+              Drop here to remove
+            </span>
+          </div>
+        ) : null}
         <div className="flex min-h-0 w-full flex-col">
           <div className="space-y-3 border-b border-foreground/10 p-4">
             <div className="flex items-center justify-between gap-3">
@@ -330,12 +338,9 @@ export function StatuslinePlayground({
 
 // ---------- composed terminal (faithful render) ----------
 
-// Slot families for ↑↓ movement: line widgets cycle top/middle/bottom, segments row1/row2.
+// Line widgets occupy top/middle/bottom, segments occupy row1/row2. Only the line
+// family is needed now — to tell a line slot from a segment slot during a drag.
 const LINE_FAMILY: Slot[] = ["top", "middle", "bottom"];
-const SEGMENT_FAMILY: Slot[] = ["row1", "row2"];
-function slotFamily(slot: Slot): Slot[] {
-  return SEGMENT_FAMILY.includes(slot) ? SEGMENT_FAMILY : LINE_FAMILY;
-}
 
 // Visible width of an ANSI line (strip SGR, count CJK/wide glyphs as 2) — drives font fit.
 function visibleWidth(s: string): number {
@@ -355,34 +360,55 @@ function visibleWidth(s: string): number {
   return w;
 }
 
+// Cell width of a mosaic line: one octant/sextant/block glyph is exactly one
+// terminal cell whatever Unicode East-Asian width says — the legacy-computing
+// blocks sit in a "wide" code-point range, but the terminal (and our canvas
+// decoder, one Cell per code point) draw them one cell wide, so visibleWidth
+// would double-count them.
+function mosaicCols(line: string): number {
+  return [...line.replace(/\x1b\[[0-9;]*m/g, "")].length;
+}
+
 function ComposedTerminal({
   items,
   byId,
   octants,
-  onRemove,
-  onMove,
-  onSetAlign,
+  dragKey,
+  onDragStart,
+  onDragEnd,
+  onMoveTo,
 }: {
   items: BuilderItem[];
   byId: Map<string, PlaygroundComponent>;
   octants: string;
-  onRemove: (key: string) => void;
-  onMove: (key: string, dir: "up" | "down" | "left" | "right") => void;
-  onSetAlign: (key: string, align: "left" | "right") => void;
+  dragKey: string | null;
+  onDragStart: (key: string) => void;
+  onDragEnd: () => void;
+  onMoveTo: (key: string, slot: Slot, align: "left" | "right", index: number) => void;
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [fontSize, setFontSize] = useState(13);
+  const [drop, setDrop] = useState<{
+    slot: Slot;
+    align: "left" | "right";
+    index: number;
+  } | null>(null);
 
-  // Fixed terminal box, content scales to fit: widest text line drives the font size
-  // (mosaic widgets render to canvas and self-fit, so they're skipped; a segment row's
-  // width is the sum of its segments + separators).
+  // Fixed terminal box, content scales to fit: widest line drives the font size.
+  // Mosaic widgets count too — they render onto a char grid (cols×rows cells) and
+  // must scale with it, so their widest row participates. A segment row's width is
+  // the sum of its segments + separators.
   const maxCols = useMemo(() => {
     let m = 24;
-    const widthOf = (c: PlaygroundComponent) =>
-      visibleWidth(((c.frames?.length ? c.frames[0] : c.preview) || "").split("\n")[0] || "");
+    const widthOf = (c: PlaygroundComponent) => {
+      const measure = c.mosaic ? mosaicCols : visibleWidth;
+      return ((c.frames?.length ? c.frames[0] : c.preview) || "")
+        .split("\n")
+        .reduce((mx, ln) => Math.max(mx, measure(ln)), 0);
+    };
     for (const it of items) {
       const c = byId.get(it.id);
-      if (!c || c.mosaic || it.slot === "row1" || it.slot === "row2") continue;
+      if (!c || it.slot === "row1" || it.slot === "row2") continue;
       m = Math.max(m, widthOf(c));
     }
     for (const slot of ["row1", "row2"] as Slot[]) {
@@ -415,81 +441,164 @@ function ComposedTerminal({
     return (
       <div className="flex h-full min-h-[12rem] items-center justify-center px-6 text-center font-mono text-xs text-neutral-600">
         Pick a profile above, or add components from the library — they compose
-        here exactly as the status line renders them.
+        here exactly as the status line renders them. Drag any piece to reorder,
+        or drag it back to the library to remove it.
       </div>
     );
   }
 
+  const draggingItem = dragKey ? items.find((it) => it.key === dragKey) : null;
+  const draggingType = draggingItem ? byId.get(draggingItem.id)?.type ?? null : null;
   const slotItems = (slot: Slot) => items.filter((item) => item.slot === slot);
 
-  const lineSlot = (slot: Slot) => {
-    const list = slotItems(slot);
-    const fi = LINE_FAMILY.indexOf(slot);
-    return list.map((item, i) => {
-      const component = byId.get(item.id);
-      if (!component) return null;
-      return (
-        <EditableLine
-          key={item.key}
-          component={component}
-          octants={octants}
-          canLeft={i > 0}
-          canRight={i < list.length - 1}
-          canUp={fi > 0}
-          canDown={fi < LINE_FAMILY.length - 1}
-          onLeft={() => onMove(item.key, "left")}
-          onRight={() => onMove(item.key, "right")}
-          onUp={() => onMove(item.key, "up")}
-          onDown={() => onMove(item.key, "down")}
-          onRemove={() => onRemove(item.key)}
-        />
-      );
-    });
+  const endDrag = () => {
+    setDrop(null);
+    onDragEnd();
+  };
+  const commit = () => {
+    if (dragKey && drop) onMoveTo(dragKey, drop.slot, drop.align, drop.index);
+    endDrag();
   };
 
-  const segmentRow = (slot: Slot) => {
+  // Line slot (top/middle/bottom): a vertical stack. Each line splits at its
+  // vertical midpoint into before/after; an empty slot only materialises a drop
+  // strip while a line is in flight, so the resting layout stays untouched.
+  const lineZone = (slot: Slot) => {
     const list = slotItems(slot);
-    if (!list.length) return null;
-    const fi = SEGMENT_FAMILY.indexOf(slot);
+    const accepts = draggingType === "line";
+    if (!list.length && !accepts) return null;
+    const lineDrop = accepts && drop && drop.slot === slot ? drop.index : -1;
+    return (
+      <div
+        key={slot}
+        onDragOver={accepts ? (e) => e.preventDefault() : undefined}
+        onDrop={accepts ? (e) => { e.preventDefault(); commit(); } : undefined}
+      >
+        {list.map((item, i) => {
+          const component = byId.get(item.id);
+          if (!component) return null;
+          return (
+            <Fragment key={item.key}>
+              {lineDrop === i ? <DropBarH /> : null}
+              <EditableLine
+                component={component}
+                octants={octants}
+                dragging={dragKey === item.key}
+                onDragStart={() => onDragStart(item.key)}
+                onDragEnd={endDrag}
+                onDragOver={
+                  accepts
+                    ? (e) => {
+                        e.preventDefault();
+                        const r = e.currentTarget.getBoundingClientRect();
+                        const after = e.clientY > r.top + r.height / 2;
+                        setDrop({ slot, align: "left", index: after ? i + 1 : i });
+                      }
+                    : undefined
+                }
+              />
+            </Fragment>
+          );
+        })}
+        {list.length > 0 && lineDrop >= list.length ? <DropBarH /> : null}
+        {accepts && !list.length ? (
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDrop({ slot, align: "left", index: 0 });
+            }}
+            className={cn(
+              "flex min-h-[1.5em] items-center justify-center rounded border border-dashed text-[0.7em] transition-colors",
+              drop?.slot === slot
+                ? "border-sky-400/60 bg-sky-400/5 text-sky-300/80"
+                : "border-white/10 text-neutral-600",
+            )}
+          >
+            {slot}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  // Segment row (row1/row2): left + right aligned groups on one line. Drop align
+  // follows which half of the row the cursor is over; drop index follows the
+  // cursor's x within that group — so dragging a segment also re-aligns it.
+  const segRow = (slot: Slot) => {
+    const list = slotItems(slot);
+    const accepts = draggingType === "segment";
+    if (!list.length && !accepts) return null;
     const left = list.filter((it) => (it.align ?? "left") !== "right");
     const right = list.filter((it) => (it.align ?? "left") === "right");
-    const seg = (item: BuilderItem, i: number, count: number) => {
-      const component = byId.get(item.id);
-      if (!component) return null;
-      return (
-        <span key={item.key} className="inline-flex items-center">
-          {i > 0 ? (
-            <span className="select-none px-1 text-[rgb(128,140,158)]">·</span>
-          ) : null}
-          <EditableSegment
-            component={component}
-            align={item.align ?? "left"}
-            canLeft={i > 0}
-            canRight={i < count - 1}
-            canUp={fi > 0}
-            canDown={fi < SEGMENT_FAMILY.length - 1}
-            onLeft={() => onMove(item.key, "left")}
-            onRight={() => onMove(item.key, "right")}
-            onUp={() => onMove(item.key, "up")}
-            onDown={() => onMove(item.key, "down")}
-            onRemove={() => onRemove(item.key)}
-            onToggleAlign={() =>
-              onSetAlign(item.key, (item.align ?? "left") === "right" ? "left" : "right")
-            }
-          />
-        </span>
-      );
+
+    const onOver = (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const host = e.currentTarget;
+      const r = host.getBoundingClientRect();
+      const align: "left" | "right" =
+        e.clientX < r.left + r.width / 2 ? "left" : "right";
+      const segs = Array.from(
+        host.querySelectorAll<HTMLElement>("[data-seg]"),
+      ).filter((el) => el.dataset.align === align);
+      let index = segs.length;
+      for (let k = 0; k < segs.length; k++) {
+        const sr = segs[k].getBoundingClientRect();
+        if (e.clientX < sr.left + sr.width / 2) {
+          index = k;
+          break;
+        }
+      }
+      setDrop({ slot, align, index });
     };
+
+    const group = (members: BuilderItem[], align: "left" | "right") => {
+      const isTarget = accepts && drop?.slot === slot && drop.align === align;
+      const dropIndex = drop && isTarget ? drop.index : -1;
+      const nodes: ReactNode[] = [];
+      members.forEach((item, i) => {
+        const component = byId.get(item.id);
+        if (!component) return;
+        if (dropIndex === i) nodes.push(<DropBarV key={`d-${i}`} />);
+        nodes.push(
+          <span key={item.key} className="inline-flex items-center">
+            {i > 0 ? (
+              <span className="select-none px-1 text-[rgb(128,140,158)]">·</span>
+            ) : null}
+            <EditableSegment
+              component={component}
+              dataAlign={align}
+              dragging={dragKey === item.key}
+              onDragStart={() => onDragStart(item.key)}
+              onDragEnd={endDrag}
+            />
+          </span>,
+        );
+      });
+      if (dropIndex >= members.length) nodes.push(<DropBarV key="d-end" />);
+      return nodes;
+    };
+
     return (
-      <div className="flex w-full items-center whitespace-pre">
-        <span className="inline-flex items-center">
-          {left.map((it, i) => seg(it, i, left.length))}
+      <div
+        key={slot}
+        onDragOver={accepts ? onOver : undefined}
+        onDrop={accepts ? (e) => { e.preventDefault(); commit(); } : undefined}
+        className={cn(
+          "flex w-full items-center whitespace-pre",
+          accepts &&
+            !list.length &&
+            "min-h-[1.5em] rounded border border-dashed border-white/10",
+        )}
+      >
+        <span className="inline-flex items-center">{group(left, "left")}</span>
+        <span
+          className={cn(
+            "inline-flex items-center",
+            right.length || accepts ? "ml-auto" : "",
+          )}
+        >
+          {group(right, "right")}
         </span>
-        {right.length ? (
-          <span className="ml-auto inline-flex items-center">
-            {right.map((it, i) => seg(it, i, right.length))}
-          </span>
-        ) : null}
       </div>
     );
   };
@@ -500,34 +609,42 @@ function ComposedTerminal({
       className="font-mono text-neutral-300"
       style={{ fontSize: `${fontSize}px`, lineHeight: 1.3 }}
     >
-      {lineSlot("top")}
-      {lineSlot("middle")}
-      {segmentRow("row1")}
-      {segmentRow("row2")}
-      {lineSlot("bottom")}
+      {lineZone("top")}
+      {lineZone("middle")}
+      {segRow("row1")}
+      {segRow("row2")}
+      {lineZone("bottom")}
     </div>
   );
 }
 
-interface UnitProps {
-  canUp: boolean;
-  canDown: boolean;
-  canLeft: boolean;
-  canRight: boolean;
-  onUp: () => void;
-  onDown: () => void;
-  onLeft: () => void;
-  onRight: () => void;
-  onRemove: () => void;
-  align?: "left" | "right";
-  onToggleAlign?: () => void;
+function DropBarH() {
+  return (
+    <div className="pointer-events-none -my-px h-0.5 rounded-full bg-sky-400/80" />
+  );
+}
+
+function DropBarV() {
+  return (
+    <span className="pointer-events-none mx-0.5 inline-block h-[1.05em] w-0.5 self-center rounded-full bg-sky-400/80 align-middle" />
+  );
 }
 
 function EditableLine({
   component,
   octants,
-  ...edit
-}: { component: PlaygroundComponent; octants: string } & UnitProps) {
+  dragging,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+}: {
+  component: PlaygroundComponent;
+  octants: string;
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver?: (e: DragEvent<HTMLDivElement>) => void;
+}) {
   const isMosaic = Boolean(component.mosaic && component.frames?.length);
   const frames = component.frames ?? [];
   const idx = useFrameCycle(isMosaic ? 0 : frames.length);
@@ -535,7 +652,19 @@ function EditableLine({
   const rows = isMosaic ? [] : parseCells((text ?? "").replace(/\n+$/, ""));
 
   return (
-    <div className="group relative w-full rounded px-1 transition-colors hover:bg-white/[0.04]">
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      className={cn(
+        "w-full cursor-grab rounded px-1 transition-colors hover:bg-white/[0.04] active:cursor-grabbing",
+        dragging && "opacity-40",
+      )}
+    >
       {isMosaic ? (
         <MosaicCanvas frames={component.frames ?? []} octants={octants} />
       ) : rows.length ? (
@@ -547,24 +676,48 @@ function EditableLine({
       ) : (
         <span className="text-neutral-600">{component.id}</span>
       )}
-      <UnitToolbar className="right-1 bottom-full mb-0.5" {...edit} />
     </div>
   );
 }
 
 function EditableSegment({
   component,
-  ...edit
-}: { component: PlaygroundComponent } & UnitProps) {
+  dataAlign,
+  dragging,
+  onDragStart,
+  onDragEnd,
+}: {
+  component: PlaygroundComponent;
+  dataAlign: "left" | "right";
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+}) {
   const frames = component.frames ?? [];
   const idx = useFrameCycle(frames.length);
   const text = (frames.length ? frames[idx % frames.length] : component.preview) || "";
   const cells = parseCells(text.replace(/\n+$/, ""))[0] ?? [];
 
   return (
-    <span className="group relative inline-flex items-center whitespace-pre rounded px-1.5 transition-colors hover:bg-white/[0.06]">
-      {cells.length ? cellSpans(cells, 0) : <span className="text-neutral-600">{component.id}</span>}
-      <UnitToolbar className="left-0 bottom-full mb-0.5" {...edit} />
+    <span
+      data-seg
+      data-align={dataAlign}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      className={cn(
+        "inline-flex cursor-grab items-center whitespace-pre rounded px-1.5 transition-colors hover:bg-white/[0.06] active:cursor-grabbing",
+        dragging && "opacity-40",
+      )}
+    >
+      {cells.length ? (
+        cellSpans(cells, 0)
+      ) : (
+        <span className="text-neutral-600">{component.id}</span>
+      )}
     </span>
   );
 }
@@ -580,88 +733,27 @@ function MosaicCanvas({
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const idx = useFrameCycle(frames.length);
+  // Sprite cell grid drives the on-screen size: the canvas occupies cols×rows of the
+  // char grid (advance 0.6em, line 1.3em) just as the terminal would, so it scales
+  // with the font fit and stays pixel-faithful and aligned with text rows above/below.
+  const { cols, rows } = useMemo(() => {
+    const lines = (frames[0] ?? "").replace(/\n+$/, "").split("\n");
+    return {
+      cols: lines.reduce((m, l) => Math.max(m, mosaicCols(l)), 0),
+      rows: lines.length,
+    };
+  }, [frames]);
   useEffect(() => {
     if (ref.current && frames.length) {
       drawMosaic(ref.current, frames[idx % frames.length], invTable(octants), px);
     }
   }, [idx, frames, octants, px]);
-  return <canvas ref={ref} className="block max-w-full [image-rendering:pixelated]" />;
-}
-
-function UnitToolbar({
-  className,
-  canUp,
-  canDown,
-  canLeft,
-  canRight,
-  onUp,
-  onDown,
-  onLeft,
-  onRight,
-  onRemove,
-  align,
-  onToggleAlign,
-}: { className?: string } & UnitProps) {
   return (
-    <span
-      className={cn(
-        "absolute z-20 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100",
-        className,
-      )}
-    >
-      <ToolButton label="Move left" disabled={!canLeft} onClick={onLeft}>
-        <ChevronLeft className="size-3" />
-      </ToolButton>
-      <ToolButton label="Move right" disabled={!canRight} onClick={onRight}>
-        <ChevronRight className="size-3" />
-      </ToolButton>
-      <ToolButton label="Move to slot above" disabled={!canUp} onClick={onUp}>
-        <ChevronUp className="size-3" />
-      </ToolButton>
-      <ToolButton label="Move to slot below" disabled={!canDown} onClick={onDown}>
-        <ChevronDown className="size-3" />
-      </ToolButton>
-      {onToggleAlign ? (
-        <ToolButton
-          label={align === "right" ? "Align left" : "Align right"}
-          onClick={onToggleAlign}
-        >
-          {align === "right" ? (
-            <AlignLeft className="size-3" />
-          ) : (
-            <AlignRight className="size-3" />
-          )}
-        </ToolButton>
-      ) : null}
-      <ToolButton label="Remove" onClick={onRemove}>
-        <X className="size-3" />
-      </ToolButton>
-    </span>
-  );
-}
-
-function ToolButton({
-  children,
-  label,
-  onClick,
-  disabled,
-}: {
-  children: ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="flex size-5 items-center justify-center rounded bg-neutral-900/90 text-neutral-400 ring-1 ring-white/10 backdrop-blur transition hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-30 disabled:hover:bg-neutral-900/90"
-    >
-      {children}
-    </button>
+    <canvas
+      ref={ref}
+      className="block [image-rendering:pixelated]"
+      style={{ width: `${cols * 0.6}em`, height: `${rows * 1.3}em` }}
+    />
   );
 }
 
