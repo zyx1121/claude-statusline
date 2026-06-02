@@ -26,9 +26,20 @@ const BASIC: Record<number, string> = {
   94: "#71bfff", 95: "#d688ed", 96: "#66c6d2", 97: "#ffffff",
 };
 
+/** Cycle 0..count-1 once per intervalMs (≈ one terminal tick). Static when count<2. */
+export function useFrameCycle(count: number, intervalMs = 1000): number {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (count < 2) return;
+    const id = setInterval(() => setI((n) => (n + 1) % count), intervalMs);
+    return () => clearInterval(id);
+  }, [count, intervalMs]);
+  return count > 0 ? i % count : 0;
+}
+
 // ---------- ANSI SGR → cells (fg + bg) ----------
 
-interface Cell {
+export interface Cell {
   ch: string;
   fg: string | null;
   bg: string | null;
@@ -36,7 +47,7 @@ interface Cell {
 
 const SGR = /\x1b\[([0-9;]*)m/g;
 
-function parseCells(input: string): Cell[][] {
+export function parseCells(input: string): Cell[][] {
   const rows: Cell[][] = [];
   let fg: string | null = null;
   let bg: string | null = null;
@@ -85,7 +96,7 @@ function parseCells(input: string): Cell[][] {
 const SX = 2, SY = 4;
 
 let invCache: Map<string, number> | null = null;
-function invTable(octants: string): Map<string, number> {
+export function invTable(octants: string): Map<string, number> {
   if (invCache) return invCache;
   invCache = new Map();
   const chars = [...octants];
@@ -93,7 +104,7 @@ function invTable(octants: string): Map<string, number> {
   return invCache;
 }
 
-function drawMosaic(cv: HTMLCanvasElement, frame: string, inv: Map<string, number>, px: number) {
+export function drawMosaic(cv: HTMLCanvasElement, frame: string, inv: Map<string, number>, px: number) {
   const rows = parseCells(frame.replace(/\n+$/, ""));
   const h = rows.length;
   const w = rows.reduce((mx, r) => Math.max(mx, r.length), 0);
@@ -258,7 +269,7 @@ export function TerminalDemo({
 
 // ---------- text widgets / segments ----------
 
-function cellSpans(cells: Cell[], keyBase: number): ReactNode[] {
+export function cellSpans(cells: Cell[], keyBase: number): ReactNode[] {
   const out: ReactNode[] = [];
   let run = "";
   let cur: { fg: string | null; bg: string | null } = { fg: null, bg: null };

@@ -21,5 +21,7 @@
   },
   "menuColor": "default",
   "menuAccent": "subtle",
-  "registries": {}
+  "registries": {
+    "@zyx1121": "https://ui.zyx.tw/r/{name}.json"
+  }
 }
