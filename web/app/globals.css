@@ -28,8 +28,8 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 1rem;
-  --corner-shape: squircle;
-  --corner-shape-smooth: squircle;
+  --corner-shape: superellipse(0.72);
+  --corner-shape-smooth: superellipse(0.82);
   --corner-shape-superellipse: superellipse(0.72);
   --block: oklch(0.97 0.004 85);
   --block-foreground: var(--foreground);
@@ -136,16 +136,21 @@
   html {
     @apply font-sans;
   }
+  @supports (corner-shape: superellipse(0.72)) {
+    :where([class*="rounded-"]:not(.rounded-full)) {
+      corner-shape: var(--corner-shape);
+    }
+  }
 }
 
 @utility corner-token {
-  @supports (corner-shape: squircle) {
+  @supports (corner-shape: superellipse(0.72)) {
     corner-shape: var(--corner-shape);
   }
 }
 
 @utility corner-smooth {
-  @supports (corner-shape: squircle) {
+  @supports (corner-shape: superellipse(0.72)) {
     corner-shape: var(--corner-shape-smooth);
   }
 }
