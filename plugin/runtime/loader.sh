@@ -4,8 +4,7 @@
 # Reads the CC JSON on stdin, projects it into CC_* env, then walks the active
 # profile's components in (slot, order) and assembles the multi-line block:
 #
-#   TOP widget lines …        (e.g. news ticker)
-#   ── rule ──                (host-drawn, if profile.rule)
+#   TOP widget lines …        (e.g. news ticker, or a divider)
 #   MIDDLE widget lines …     (e.g. creatures stage — may be many lines)
 #   ROW1 segments joined ' · '
 #   ROW2 segments joined ' · '
@@ -53,12 +52,9 @@ while IFS=$'\t' read -r id slot order cfg; do
   esac
 done < <(profile_iter "$PROFILE")
 
-rule_on=$(jq -r '.rule // false' "$PROFILE" 2>/dev/null)
-
 # Assemble — fixed slot order, arbitrary lines per slot. segment rows go through %b
 # (to interpret the literal-ESC separator); widget bytes print verbatim with %s.
 for w in "${TOP[@]}";    do printf '%s\n' "$w"; done
-[ "$rule_on" = "true" ] && printf "${RULE_COLOR}%s${RESET}\n" "$(printf '─%.0s' $(seq 1 "$COLS"))"
 for w in "${MIDDLE[@]}"; do printf '%s\n' "$w"; done
 printf '%b\n' "$(join_sep "${ROW1[@]}")"
 printf '%b'   "$(join_sep "${ROW2[@]}")"

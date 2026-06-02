@@ -20,11 +20,6 @@
       "type": "string",
       "description": "One-line summary of what the profile shows."
     },
-    "rule": {
-      "type": "boolean",
-      "description": "Whether the host draws its thin divider rule between the top and middle slots when this profile is active.",
-      "default": false
-    },
     "components": {
       "type": "array",
       "description": "Component instances to render. The same id may appear multiple times (distinguished by order + config), e.g. ratelimit for the 5h and 7d windows.",
@@ -46,7 +41,7 @@
         "slot": {
           "type": "string",
           "description": "Slot to place into; overrides the component's placement.slot. top/middle/bottom = line widgets; row1/row2 = segments joined with ' · '.",
-          "enum": ["top", "rule", "middle", "bottom", "row1", "row2"]
+          "enum": ["top", "middle", "bottom", "row1", "row2"]
         },
         "order": {
           "type": "integer",
