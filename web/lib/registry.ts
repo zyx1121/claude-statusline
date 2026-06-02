@@ -65,6 +65,7 @@ export interface ProfileInstance {
   id: string;
   slot?: string;
   order?: number;
+  align?: "left" | "right";
   config?: Record<string, unknown>;
 }
 
