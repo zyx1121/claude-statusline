@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import { Container } from "@/components/blocks/container";
 import { getDict, getLocale, localeOptions } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
@@ -51,7 +50,7 @@ export default async function RootLayout({
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <Container className="flex h-14 items-center justify-between">
+          <div className="flex h-14 w-full items-center justify-between px-4 sm:px-6">
             <Link
               href="/"
               className="font-mono text-sm font-semibold tracking-tight transition-colors hover:text-foreground/80"
@@ -93,37 +92,10 @@ export default async function RootLayout({
                 label={t.nav.language}
               />
             </nav>
-          </Container>
+          </div>
         </header>
 
-        <div className="flex-1">
-          <Container>{children}</Container>
-        </div>
-
-        <footer>
-          <Container className="flex flex-col items-center justify-between gap-2 py-6 text-xs text-foreground/60 sm:flex-row">
-            <p>
-              {t.footer.license} &middot; {t.footer.builtBy}{" "}
-              <a
-                href="https://github.com/zyx1121"
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-foreground/80 hover:text-foreground font-medium transition-colors"
-              >
-                @zyx1121
-              </a>
-            </p>
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
-            >
-              <GitHubMark className="size-3.5" />
-              github.com/zyx1121/claude-statusline
-            </a>
-          </Container>
-        </footer>
+        <div className="w-full flex-1 px-4 sm:px-6">{children}</div>
       </body>
     </html>
   );
