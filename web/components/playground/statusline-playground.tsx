@@ -57,7 +57,6 @@ export interface PlaygroundComponent {
 export interface PlaygroundProfile {
   name: string;
   description?: string;
-  rule?: boolean;
   components: Array<{
     id: string;
     slot?: string;
@@ -247,7 +246,6 @@ export function StatuslinePlayground({
               items={items}
               byId={byId}
               octants={octants}
-              rule={profile.rule ?? false}
               onRemove={removeItem}
               onMove={moveItem}
             />
@@ -346,14 +344,12 @@ function ComposedTerminal({
   items,
   byId,
   octants,
-  rule,
   onRemove,
   onMove,
 }: {
   items: BuilderItem[];
   byId: Map<string, PlaygroundComponent>;
   octants: string;
-  rule: boolean;
   onRemove: (key: string) => void;
   onMove: (key: string, dir: "up" | "down" | "left" | "right") => void;
 }) {
@@ -467,8 +463,6 @@ function ComposedTerminal({
     );
   };
 
-  const hasTop = slotItems("top").length > 0;
-
   return (
     <div
       ref={bodyRef}
@@ -476,7 +470,6 @@ function ComposedTerminal({
       style={{ fontSize: `${fontSize}px`, lineHeight: 1.3 }}
     >
       {lineSlot("top")}
-      {rule && hasTop ? <div className="my-1 h-px w-full bg-white/10" /> : null}
       {lineSlot("middle")}
       {segmentRow("row1")}
       {segmentRow("row2")}
@@ -722,7 +715,6 @@ function buildProfile(
   return {
     name: selectedProfile === "custom" ? "playground" : selectedProfile,
     description: "Composed in the claude-statusline playground.",
-    rule: true,
     components: SLOTS.flatMap((slot) =>
       (grouped.get(slot.id) ?? []).map((item, index) => ({
         id: item.id,
