@@ -129,8 +129,8 @@ host fork line component 時注入兩個環境變數：
 
 - cache 檔自取名，建議含 sid 避免 session 互踩（如 `.<id>.<sid>.state.json`）。fetch
   process 同樣讀 `STATUSLINE_STATE` 找路徑，不要自己另開目錄。
-- segment 不吃這兩個環境變數（in-process）；需要慢源資料時讀 loader-scope 的共用 cache
-  變數（如 pve 的 `$pve_run` / `$pve_total`，由 B-class refresher 注入）。
+- segment 不吃這兩個環境變數（只有被 fork 的 line component 才拿得到）；segment 只看 `CC_*`，
+  要慢源 / 網路資料請改用 line component + `fetch` 背景刷新。
 
 ### component 解析順序（兩層 search path）
 

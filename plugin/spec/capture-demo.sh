@@ -4,10 +4,9 @@
 # the marketplace home page can show a big animated terminal of components
 # composed together (news ticker + creatures + segment rows + stock ticker).
 #
-# Runs the loader in an isolated $HOME so it never touches the user's state or the
-# private B-class cache refresher (~/.claude/statusline-cache.sh). Network is used
-# once up front to warm the news/stock caches (en-US news, TWSE stocks). Pure
-# representative mock stdin drives the segments.
+# Runs the loader in an isolated $HOME so it never touches the user's real state.
+# Network is used once up front to warm the news/stock caches (en-US news, TWSE
+# stocks). Pure representative mock stdin drives the segments.
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # plugin/
 RUNTIME="${HERE}/runtime"
@@ -18,12 +17,12 @@ SID="demo"
 OUT="${HERE}/spec/demo.frames.json"
 
 tmp="$(mktemp -d)"
-export HOME="$tmp"          # isolate loader STATE; skips the user's statusline-cache.sh
+export HOME="$tmp"          # isolate loader STATE from the user's real ~/.claude
 ST="$HOME/.claude/.statusline-state"
 mkdir -p "$ST/news" "$ST/stock-ticker"
 
 # Showcase profile: news (en) top · creatures (Ditto + Psyduck) mid · session row ·
-# repo row · stock bottom. No pve/utils (those are private user-layer components).
+# repo row · stock bottom. Built-in components only.
 prof="$tmp/demo.json"
 cat > "$prof" <<'JSON'
 { "$schema": "statusline/profile@1", "name": "demo", "rule": true, "components": [

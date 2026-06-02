@@ -73,7 +73,6 @@ export interface Profile {
   name: string;
   description?: string;
   rule?: boolean;
-  side_effects?: string[];
   components: ProfileInstance[];
 }
 
