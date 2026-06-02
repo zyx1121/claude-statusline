@@ -36,17 +36,6 @@ COLS=${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}
 eval "$(extract_stdin_fields <<<"$input")"
 SID="$CC_SID"
 
-# B-class slow-source cache refresher (pve etc.): detached when stale; segments read $CACHE.
-CACHE="${HOME}/.claude/.statusline-cache"
-REFRESH="${HOME}/.claude/statusline-cache.sh"
-if [ -f "$REFRESH" ]; then
-  cache_age=999999
-  [ -f "$CACHE" ] && cache_age=$(( $(date +%s) - $(stat -f %m "$CACHE" 2>/dev/null || echo 0) ))
-  [ "$cache_age" -ge 30 ] && ( bash "$REFRESH" >/dev/null 2>&1 & )
-  # shellcheck disable=SC1090
-  [ -f "$CACHE" ] && . "$CACHE"     # exports pve_run / pve_total for the pve segment
-fi
-
 # Resolve active profile: env override → user default → bundled example.
 PROFILE="${STATUSLINE_PROFILE:-${PROFILES}/default.json}"
 [ -f "$PROFILE" ] || PROFILE="${PLUGIN_ROOT}/profiles/full.json"
@@ -74,11 +63,3 @@ for w in "${MIDDLE[@]}"; do printf '%s\n' "$w"; done
 printf '%b\n' "$(join_sep "${ROW1[@]}")"
 printf '%b'   "$(join_sep "${ROW2[@]}")"
 for w in "${BOTTOM[@]}"; do printf '\n%s' "$w"; done
-
-# Side-effects (non-visual): run each named side-effect script if found (user layer
-# first, then plugin built-ins). Detached; CC_* are already exported so they inherit.
-for se in $(jq -r '.side_effects // [] | .[]' "$PROFILE" 2>/dev/null); do
-  for d in "${USER_DIR}/side-effects" "${PLUGIN_ROOT}/side-effects"; do
-    [ -f "${d}/${se}.sh" ] && { bash "${d}/${se}.sh" >/dev/null 2>&1 & break; }
-  done
-done

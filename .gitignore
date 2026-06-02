@@ -1,3 +1,6 @@
+# macOS
+.DS_Store
+
 # runtime artifacts — never committed
 __pycache__/
 *.pyc
@@ -6,7 +9,7 @@ __pycache__/
 .statusline-*.cache.json
 .statusline-*.lock
 
-# web (Phase 3)
+# web
 web/node_modules/
 web/.next/
 web/out/

@@ -25,12 +25,6 @@
       "description": "Whether the host draws its thin divider rule between the top and middle slots when this profile is active.",
       "default": false
     },
-    "side_effects": {
-      "type": "array",
-      "description": "Names of non-visual side-effect scripts to run (detached) when this profile is active. Resolved user-layer-first, then plugin built-ins, as <name>.sh. Empty for pure display profiles.",
-      "items": { "type": "string" },
-      "default": []
-    },
     "components": {
       "type": "array",
       "description": "Component instances to render. The same id may appear multiple times (distinguished by order + config), e.g. ratelimit for the 5h and 7d windows.",

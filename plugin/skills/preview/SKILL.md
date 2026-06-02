@@ -56,7 +56,6 @@ STATUSLINE_PROFILE="$STATUSLINE_PLUGIN_ROOT/profiles/<name>.json" \
 
 - loader 解析 profile 的順序是 `STATUSLINE_PROFILE`（路徑）→ user default `~/.claude/statusline/profiles/default.json` → bundled `profiles/full.json`。預覽時**只用 `STATUSLINE_PROFILE` 指向要看的那份 JSON，絕不去改 user default**。要看 user 自訂 profile 就把路徑指到 `~/.claude/statusline/profiles/<name>.json`。
 - loader 輸出就是真實 multi-line block：top widget 行 → （profile `rule:true` 才有）host 畫的 rule → middle widget 行 → row1 segments（` · ` 串）→ row2 segments → bottom widget 行。原樣印出，ANSI 直接顯示。
-- 注意 loader 尾段會 fork profile 的 `side_effects[]`（detached）。預覽帶 side-effects 的 profile 前先 `jq -r '.side_effects // []' <profile.json>` 看一眼，有就在結語誠實告知（這跟 active profile 跑法一致，非「啟用」），不想觸發就改用單 component 預覽（Step 3b）。
 
 ### 3b. Component preview — 單獨跑那一個 component
 
@@ -110,7 +109,6 @@ done
 - 給使用者一段清楚結語，必須包含：
   - 這只是 dry-run preview，**沒有**寫 `settings.json`、**沒有**改 user-default profile、**沒有**動 user layer / 真正的 component state。
   - 若 line widget 有 `fetch` 且你跑了它，誠實說明它寫了 cache（這裡導到臨時 state，正常運作的一部分，跟「啟用 component」無關）。
-  - 若走完整 loader 預覽的 profile 帶 `side_effects[]`，誠實說明這些 script 被 fork 過（loader 對 active profile 也這樣跑，屬正常行為，非「啟用」）。
   - 真要套用，請走 `/statusline:setup`（首次安裝 / 接線）或對應的 configure / profile 切換指令 — preview 不會替你做。
 
 ## Notes
