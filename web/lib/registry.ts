@@ -72,7 +72,6 @@ export interface ProfileInstance {
 export interface Profile {
   name: string;
   description?: string;
-  rule?: boolean;
   components: ProfileInstance[];
 }
 

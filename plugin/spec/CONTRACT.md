@@ -23,7 +23,7 @@ component 有兩種型別：
 | 可否 fetch | 否 | 可（背景刷新） |
 | 隱藏 | 不設 / 設 `REPLY=""` | 印空輸出 |
 
-版面組裝順序（固定）：`top` 行 → 可選 rule → `middle` 行 → `row1` → `row2` → `bottom` 行。
+版面組裝順序（固定）：`top` 行 → `middle` 行 → `row1` → `row2` → `bottom` 行。要分隔線就放 `divider` component 進任一 line slot（host 不再畫 rule）。
 
 ## stdin 投影 → CC_* 環境變數
 

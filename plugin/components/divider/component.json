@@ -1,0 +1,34 @@
+{
+  "$schema": "statusline/component@1",
+  "id": "divider",
+  "name": "Divider",
+  "version": "0.1.0",
+  "author": {
+    "github": "zyx1121"
+  },
+  "description": "A full-width horizontal rule, as a component — drop it in any line slot wherever you want a separator.",
+  "i18n": {
+    "zh-Hant": {
+      "name": "分隔線",
+      "description": "滿寬水平分隔線，做成 component — 想在哪分隔就放進哪個 line slot。"
+    },
+    "zh-Hans": {
+      "name": "分隔线",
+      "description": "满宽水平分隔线，做成 component — 想在哪分隔就放进哪个 line slot。"
+    }
+  },
+  "type": "line",
+  "runtime": "bash",
+  "render": {
+    "entry": "render.sh"
+  },
+  "inputs": [],
+  "requires": {},
+  "placement": {
+    "slot": "top",
+    "order": 90
+  },
+  "capabilities": {
+    "stdin_fields": []
+  }
+}

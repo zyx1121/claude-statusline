@@ -1,10 +1,10 @@
 {
   "$schema": "statusline/profile@1",
   "name": "loki",
-  "description": "The author's daily driver: a news ticker up top, a creatures stage, a session row (model · context · 5h + 7d limits · cost), a repo row (git · PR · burn · now-playing), and a stock ticker at the bottom.",
-  "rule": true,
+  "description": "The author's daily driver: a news ticker up top, a divider, a creatures stage, a session row (model · context · 5h + 7d limits · cost), a repo row (git · PR · burn · now-playing), and a stock ticker at the bottom.",
   "components": [
     { "id": "news",         "slot": "top",    "order": 10, "config": { "lang": "zh-TW", "topics": "top,國際,科技,AI" } },
+    { "id": "divider",      "slot": "top",    "order": 20 },
     { "id": "creatures",    "slot": "middle", "order": 10, "config": { "ground": "grass", "resident": "132,54,79" } },
 
     { "id": "model",        "slot": "row1", "order": 10 },

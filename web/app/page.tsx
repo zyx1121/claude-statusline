@@ -39,7 +39,6 @@ export default async function Home() {
   const profiles: PlaygroundProfile[] = reg.profiles.map((profile) => ({
     name: profile.name,
     description: profile.description,
-    rule: profile.rule,
     components: profile.components,
   }));
 
