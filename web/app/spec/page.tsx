@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ComponentProps } from "react";
 import Markdown, { type Components } from "react-markdown";
 import { FileJson, FileText, Terminal, GitPullRequest } from "lucide-react";
+import { Surface } from "@/components/blocks/surface";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getContract } from "@/lib/registry";
@@ -47,7 +48,7 @@ const markdownComponents: Components = {
   h2: ({ className, ...props }: ComponentProps<"h2">) => (
     <h2
       className={cn(
-        "mt-10 mb-3 border-b border-border/60 pb-2 text-xl font-semibold tracking-tight",
+        "mt-10 mb-3 pb-2 text-xl font-semibold tracking-tight",
         className,
       )}
       {...props}
@@ -106,19 +107,19 @@ const markdownComponents: Components = {
   blockquote: ({ className, ...props }: ComponentProps<"blockquote">) => (
     <blockquote
       className={cn(
-        "my-4 border-l-2 border-border pl-4 text-muted-foreground italic",
+        "my-4 border-l-2 border-foreground/20 pl-4 text-foreground/60 italic",
         className,
       )}
       {...props}
     />
   ),
   hr: ({ className, ...props }: ComponentProps<"hr">) => (
-    <hr className={cn("my-8 border-border/60", className)} {...props} />
+    <hr className={cn("my-8 border-foreground/10", className)} {...props} />
   ),
   pre: ({ className, ...props }: ComponentProps<"pre">) => (
     <pre
       className={cn(
-        "my-4 overflow-x-auto rounded-lg border border-border/60 bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground/90",
+        "corner-token my-4 overflow-x-auto rounded-xl bg-block p-4 font-mono text-xs leading-relaxed text-foreground/90",
         className,
       )}
       {...props}
@@ -131,7 +132,7 @@ const markdownComponents: Components = {
       <code
         className={cn(
           isInline &&
-            "rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground",
+            "rounded-md bg-block px-1.5 py-0.5 font-mono text-[0.85em] text-foreground",
           className,
         )}
         {...props}
@@ -149,7 +150,7 @@ const markdownComponents: Components = {
   th: ({ className, ...props }: ComponentProps<"th">) => (
     <th
       className={cn(
-        "border border-border/60 bg-muted/40 px-3 py-2 text-left font-medium",
+        "border border-foreground/10 bg-block px-3 py-2 text-left font-medium",
         className,
       )}
       {...props}
@@ -157,7 +158,7 @@ const markdownComponents: Components = {
   ),
   td: ({ className, ...props }: ComponentProps<"td">) => (
     <td
-      className={cn("border border-border/60 px-3 py-2 align-top", className)}
+      className={cn("border border-foreground/10 px-3 py-2 align-top", className)}
       {...props}
     />
   ),
@@ -177,24 +178,24 @@ export default async function SpecPage() {
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           {t.spec.title}
         </h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">{t.spec.intro}</p>
+        <p className="mt-3 max-w-2xl text-foreground/60">{t.spec.intro}</p>
       </header>
 
       {/* Directory shape */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight">
-          <FileJson className="size-5 text-muted-foreground" />
+          <FileJson className="size-5 text-foreground/60" />
           {t.spec.dirShape}
         </h2>
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-4 text-sm text-foreground/60">
           Everything lives under{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+          <code className="rounded-md bg-block px-1.5 py-0.5 font-mono text-xs">
             plugin/components/&lt;id&gt;/
           </code>
           . The manifest declares identity and contract, the README is the trust
           surface, and the render entry produces the actual output.
         </p>
-        <pre className="overflow-x-auto rounded-lg border border-border/60 bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground/90">
+        <pre className="corner-token overflow-x-auto rounded-xl bg-block p-4 font-mono text-xs leading-relaxed text-foreground/90">
           {DIR_SHAPE}
         </pre>
       </section>
@@ -202,30 +203,30 @@ export default async function SpecPage() {
       {/* Segment vs line */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight">
-          <Terminal className="size-5 text-muted-foreground" />
+          <Terminal className="size-5 text-foreground/60" />
           {t.spec.segmentVsLine}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-border/60 p-4">
+          <Surface size="sm">
             <Badge variant="secondary" className="mb-2 font-mono">
               segment
             </Badge>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-foreground/60">
               Renders <strong className="text-foreground">in-process</strong>:
               fast, synchronous bash that prints one chunk of text. The default
               choice — a clock, a git branch, a context gauge.
             </p>
-          </div>
-          <div className="rounded-lg border border-border/60 p-4">
+          </Surface>
+          <Surface size="sm">
             <Badge variant="secondary" className="mb-2 font-mono">
               line
             </Badge>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-foreground/60">
               Forks a <strong className="text-foreground">widget</strong>: its
               own process, so it can be Python, do async work, or animate. Use
               it when a segment&apos;s in-process budget is too tight.
             </p>
-          </div>
+          </Surface>
         </div>
       </section>
 
@@ -235,35 +236,35 @@ export default async function SpecPage() {
           {t.spec.contract}
         </h2>
         <dl className="space-y-4 text-sm">
-          <div className="rounded-lg border border-border/60 p-4">
+          <Surface size="sm">
             <dt className="mb-1 font-mono font-medium">render</dt>
-            <dd className="text-muted-foreground">
+            <dd className="text-foreground/60">
               The status JSON arrives on{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              <code className="rounded-md bg-background px-1 py-0.5 font-mono text-xs">
                 stdin
               </code>
               ; declared inputs are exported as environment variables. Write the
               rendered output to{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              <code className="rounded-md bg-background px-1 py-0.5 font-mono text-xs">
                 stdout
               </code>{" "}
               (ANSI allowed), keep it to a single line, and exit fast.
             </dd>
-          </div>
-          <div className="rounded-lg border border-border/60 p-4">
+          </Surface>
+          <Surface size="sm">
             <dt className="mb-1 font-mono font-medium">fetch</dt>
-            <dd className="text-muted-foreground">
+            <dd className="text-foreground/60">
               Optional. Runs out of band on its own cadence to do the
               network-bound or expensive work, caching the result so{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              <code className="rounded-md bg-background px-1 py-0.5 font-mono text-xs">
                 render
               </code>{" "}
               stays cheap. Anything that touches the network or secrets belongs
               here, declared in the manifest&apos;s capabilities.
             </dd>
-          </div>
+          </Surface>
         </dl>
-        <p className="mt-4 text-sm text-muted-foreground">
+        <p className="mt-4 text-sm text-foreground/60">
           The full normative contract is below. The JSON schemas are the source
           of truth for the manifest and profile shapes:{" "}
           <a
@@ -290,12 +291,12 @@ export default async function SpecPage() {
       {/* Contributing */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight">
-          <GitPullRequest className="size-5 text-muted-foreground" />
+          <GitPullRequest className="size-5 text-foreground/60" />
           {t.spec.contributing}
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-foreground/60">
           A new component is a pull request that adds a single{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+          <code className="rounded-md bg-block px-1.5 py-0.5 font-mono text-xs">
             plugin/components/&lt;id&gt;/
           </code>{" "}
           directory. Match the contract below, validate against the schemas in{" "}
@@ -310,10 +311,10 @@ export default async function SpecPage() {
           , and write the README so Claude can read it, understand the trust
           surface, and install it.
         </p>
-        <p className="mt-4 text-sm text-muted-foreground">
+        <p className="mt-4 text-sm text-foreground/60">
           Once the directory lands, anyone can enable it in their active profile
           with{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+          <code className="rounded-md bg-block px-1.5 py-0.5 font-mono text-xs">
             /statusline:install &lt;id&gt;
           </code>
           .
@@ -323,7 +324,7 @@ export default async function SpecPage() {
       {/* Full contract */}
       <section>
         <div className="mb-6 flex items-center gap-2">
-          <FileText className="size-5 text-muted-foreground" />
+          <FileText className="size-5 text-foreground/60" />
           <h2 className="text-xl font-semibold tracking-tight">
             CONTRACT.md
           </h2>
@@ -331,7 +332,7 @@ export default async function SpecPage() {
             href={SPEC_TREE_URL}
             target="_blank"
             rel="noreferrer noopener"
-            className="ml-auto text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            className="ml-auto text-xs text-foreground/60 underline underline-offset-4 hover:text-foreground"
           >
             {t.spec.viewSource}
           </a>

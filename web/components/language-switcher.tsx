@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 const LOCALE_COOKIE = "NEXT_LOCALE";
 
@@ -32,36 +32,20 @@ export function LanguageSwitcher({
 
   const pick = (value: string) => {
     if (value === current) return;
-    // Writing document.cookie is a deliberate DOM side effect in this click
-    // handler; the react-compiler immutability rule misreads it as a mutation.
-    // eslint-disable-next-line react-hooks/immutability
     document.cookie = `${LOCALE_COOKIE}=${value}; path=/; max-age=31536000; samesite=lax`;
     startTransition(() => router.refresh());
   };
 
   return (
-    <div
-      role="group"
+    <SegmentedControl
       aria-label={label}
-      className="flex items-center gap-0.5 rounded-md border border-border/60 p-0.5"
-    >
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => pick(o.value)}
-          aria-pressed={o.value === current}
-          title={o.label}
-          className={cn(
-            "rounded px-1.5 py-0.5 text-xs font-medium transition-colors",
-            o.value === current
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {o.short}
-        </button>
-      ))}
-    </div>
+      value={current}
+      onValueChange={pick}
+      options={options.map((o) => ({
+        value: o.value,
+        label: <span title={o.label}>{o.short}</span>,
+      }))}
+      className="p-0.5 [&_button]:h-7 [&_button]:px-2 [&_button]:text-xs"
+    />
   );
 }

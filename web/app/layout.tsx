@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { Container } from "@/components/blocks/container";
 import { getDict, getLocale, localeOptions } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
@@ -18,9 +19,6 @@ const geistMono = Geist_Mono({
 });
 
 const REPO_URL = "https://github.com/zyx1121/claude-statusline";
-
-// One container width shared by the header, every page, and the footer.
-const CONTAINER = "mx-auto w-full max-w-5xl px-4 sm:px-6";
 
 export const metadata: Metadata = {
   title: "claude-statusline — a Claude-native, modular status line",
@@ -51,31 +49,31 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="bg-background text-foreground flex min-h-full flex-col">
-        <header className="border-border/60 bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 w-full border-b backdrop-blur">
-          <div className={`${CONTAINER} flex h-14 items-center justify-between`}>
+      <body className="flex min-h-full flex-col bg-background text-foreground">
+        <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <Container className="flex h-14 items-center justify-between">
             <Link
               href="/"
-              className="hover:text-foreground/80 font-mono text-sm font-semibold tracking-tight transition-colors"
+              className="font-mono text-sm font-semibold tracking-tight transition-colors hover:text-foreground/80"
             >
               claude-statusline
             </Link>
             <nav className="flex items-center gap-4 text-sm sm:gap-5">
               <Link
                 href="/"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-foreground/60 transition-colors hover:text-foreground"
               >
                 {t.nav.components}
               </Link>
               <Link
                 href="/templates"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-foreground/60 transition-colors hover:text-foreground"
               >
                 {t.nav.templates}
               </Link>
               <Link
                 href="/spec"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-foreground/60 transition-colors hover:text-foreground"
               >
                 {t.nav.spec}
               </Link>
@@ -83,7 +81,7 @@ export default async function RootLayout({
                 href={REPO_URL}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
+                className="inline-flex items-center gap-1.5 text-foreground/60 transition-colors hover:text-foreground"
                 aria-label={t.nav.github}
               >
                 <GitHubMark className="size-4" />
@@ -95,17 +93,15 @@ export default async function RootLayout({
                 label={t.nav.language}
               />
             </nav>
-          </div>
+          </Container>
         </header>
 
         <div className="flex-1">
-          <div className={CONTAINER}>{children}</div>
+          <Container>{children}</Container>
         </div>
 
-        <footer className="border-border/60 border-t">
-          <div
-            className={`${CONTAINER} text-muted-foreground flex flex-col items-center justify-between gap-2 py-6 text-xs sm:flex-row`}
-          >
+        <footer>
+          <Container className="flex flex-col items-center justify-between gap-2 py-6 text-xs text-foreground/60 sm:flex-row">
             <p>
               {t.footer.license} &middot; {t.footer.builtBy}{" "}
               <a
@@ -126,7 +122,7 @@ export default async function RootLayout({
               <GitHubMark className="size-3.5" />
               github.com/zyx1121/claude-statusline
             </a>
-          </div>
+          </Container>
         </footer>
       </body>
     </html>
