@@ -12,6 +12,8 @@ import {
 import { Library, Plus, Search, X } from "lucide-react";
 
 import {
+  AnimatedPreview,
+  MosaicPreview,
   cellSpans,
   drawMosaic,
   invTable,
@@ -147,12 +149,6 @@ export function StatuslinePlayground({
     return () => ro.disconnect();
   }, []);
 
-  function applyProfile(profileName: string) {
-    const next = profiles.find((p) => p.name === profileName);
-    setSelectedProfile(profileName);
-    setItems(profileToItems(next, byId));
-  }
-
   function addComponent(id: string, slot?: Slot) {
     const component = byId.get(id);
     if (!component) return;
@@ -196,31 +192,9 @@ export function StatuslinePlayground({
     });
   }
 
-  function clearItems() {
-    setSelectedProfile("custom");
-    setItems([]);
-  }
-
   return (
     <main className="relative left-1/2 flex h-[calc(100dvh-3.5rem)] w-dvw -translate-x-1/2 flex-col overflow-hidden border-t border-foreground/10 bg-background lg:flex-row">
-      <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {profiles.slice(0, 4).map((p) => (
-            <Button
-              key={p.name}
-              variant={selectedProfile === p.name ? "default" : "outline"}
-              size="sm"
-              onClick={() => applyProfile(p.name)}
-            >
-              {p.name}
-            </Button>
-          ))}
-          <Button variant="ghost" size="sm" onClick={clearItems}>
-            <X className="size-3.5" />
-            Clear
-          </Button>
-        </div>
-
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6">
         <div
           ref={fitRef}
           className="flex min-h-0 flex-1 items-center justify-center overflow-hidden"
@@ -306,6 +280,7 @@ export function StatuslinePlayground({
                 <LibraryItem
                   key={component.id}
                   component={component}
+                  octants={octants}
                   recommended={recommendScore(component, selectedIds, missingSlots) >= 5}
                   onAdd={() => addComponent(component.id)}
                 />
@@ -733,15 +708,34 @@ function MosaicCanvas({
 
 function LibraryItem({
   component,
+  octants,
   recommended,
   onAdd,
 }: {
   component: PlaygroundComponent;
+  octants: string;
   recommended: boolean;
   onAdd: () => void;
 }) {
+  const mosaic = Boolean(component.mosaic && component.frames?.length);
+  const hasText =
+    !mosaic && Boolean(component.frames?.length || component.preview.trim());
   return (
     <div className="corner-token rounded-xl bg-background p-3 ring-1 ring-foreground/10 transition hover:ring-foreground/20">
+      {mosaic ? (
+        <MosaicPreview
+          frames={component.frames ?? []}
+          octants={octants}
+          px={2}
+          className="mb-3 !overflow-x-hidden"
+        />
+      ) : hasText ? (
+        <AnimatedPreview
+          frames={component.frames}
+          fallback={component.preview}
+          className="mb-3 !overflow-x-hidden"
+        />
+      ) : null}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
