@@ -101,6 +101,8 @@ export function StatuslinePlayground({
   const [query, setQuery] = useState("");
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  // Mobile only: which panel is expanded (one at a time). Desktop shows both.
+  const [mobilePanel, setMobilePanel] = useState<"library" | "config" | null>(null);
 
   const selectedIds = useMemo(() => new Set(items.map((item) => item.id)), [items]);
   const missingSlots = useMemo(
@@ -222,12 +224,12 @@ export function StatuslinePlayground({
   const selectedComponent = selectedItem ? byId.get(selectedItem.id) ?? null : null;
 
   return (
-    <main className="relative left-1/2 flex h-[calc(100dvh-3.5rem)] w-dvw -translate-x-1/2 flex-col overflow-hidden border-t border-foreground/10 bg-background lg:block">
+    <main className="relative left-1/2 h-[calc(100dvh-3.5rem)] w-dvw -translate-x-1/2 overflow-hidden border-t border-foreground/10 bg-background">
       {/* Terminal canvas — the focus. On desktop it sits in the clear column between
-          the two floating panels; on mobile it's the top of a stacked column. */}
+          the two floating panels; on mobile it fills the area above the toggle bar. */}
       <div
         ref={fitRef}
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4 sm:p-6 lg:absolute lg:inset-y-0 lg:left-[372px] lg:right-[372px] lg:flex-none lg:px-0 lg:py-5"
+        className="absolute inset-x-0 top-0 bottom-14 z-0 flex items-center justify-center overflow-hidden p-4 sm:p-6 lg:inset-y-0 lg:bottom-0 lg:left-[372px] lg:right-[372px] lg:p-0 lg:py-5"
       >
         <TerminalSurface className="flex max-h-full max-w-full flex-col overflow-hidden">
           <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
@@ -252,7 +254,10 @@ export function StatuslinePlayground({
               availWidth={availWidth}
               dragKey={dragKey}
               selectedKey={selectedKey}
-              onSelect={setSelectedKey}
+              onSelect={(key) => {
+                setSelectedKey(key);
+                setMobilePanel("config");
+              }}
               onDragStart={setDragKey}
               onDragEnd={() => setDragKey(null)}
               onMoveTo={moveTo}
@@ -261,7 +266,8 @@ export function StatuslinePlayground({
         </TerminalSurface>
       </div>
 
-      {/* Left overlay — component library */}
+      {/* Left panel — component library. Floating overlay on desktop; a collapsible
+          bottom sheet on mobile (one panel open at a time via the toggle bar). */}
       <aside
         onDragOver={(e) => {
           if (dragKey) e.preventDefault();
@@ -273,8 +279,9 @@ export function StatuslinePlayground({
           setDragKey(null);
         }}
         className={cn(
-          "relative z-10 flex max-h-[42dvh] min-h-0 shrink-0 flex-col border-t border-foreground/10 bg-block/70 transition-colors",
-          "lg:absolute lg:inset-y-4 lg:left-4 lg:max-h-none lg:w-[340px] lg:rounded-2xl lg:border lg:border-foreground/10 lg:bg-background/80 lg:shadow-xl lg:shadow-black/20 lg:backdrop-blur",
+          "absolute inset-x-0 top-0 bottom-14 z-30 min-h-0 flex-col border-t border-foreground/10 bg-background/95 backdrop-blur transition-colors",
+          "lg:inset-x-auto lg:inset-y-4 lg:left-4 lg:z-10 lg:flex lg:w-[340px] lg:rounded-2xl lg:border lg:border-foreground/10 lg:bg-background/80 lg:shadow-xl lg:shadow-black/20",
+          mobilePanel === "library" ? "flex" : "hidden",
           dragKey && "bg-red-500/[0.04]",
         )}
       >
@@ -322,21 +329,44 @@ export function StatuslinePlayground({
         </div>
       </aside>
 
-      {/* Right overlay — config for the selected component */}
+      {/* Right panel — config for the selected component */}
       <aside
         className={cn(
-          "relative z-10 max-h-[42dvh] min-h-0 shrink-0 flex-col border-t border-foreground/10 bg-block/70",
-          "lg:absolute lg:inset-y-4 lg:right-4 lg:flex lg:max-h-none lg:w-[340px] lg:rounded-2xl lg:border lg:border-foreground/10 lg:bg-background/80 lg:shadow-xl lg:shadow-black/20 lg:backdrop-blur",
-          selectedItem ? "flex" : "hidden lg:flex",
+          "absolute inset-x-0 top-0 bottom-14 z-30 min-h-0 flex-col border-t border-foreground/10 bg-background/95 backdrop-blur",
+          "lg:inset-x-auto lg:inset-y-4 lg:right-4 lg:z-10 lg:flex lg:w-[340px] lg:rounded-2xl lg:border lg:border-foreground/10 lg:bg-background/80 lg:shadow-xl lg:shadow-black/20",
+          mobilePanel === "config" ? "flex" : "hidden",
         )}
       >
         <ConfigPanel
           item={selectedItem}
           component={selectedComponent}
           onChange={updateConfig}
-          onClose={() => setSelectedKey(null)}
+          onClose={() => {
+            setSelectedKey(null);
+            setMobilePanel(null);
+          }}
         />
       </aside>
+
+      {/* Mobile-only toggle bar — open one panel at a time */}
+      <div className="absolute inset-x-0 bottom-0 z-40 flex h-14 items-center justify-center gap-2 border-t border-foreground/10 bg-background/90 px-4 backdrop-blur lg:hidden">
+        <Button
+          variant={mobilePanel === "library" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMobilePanel((p) => (p === "library" ? null : "library"))}
+        >
+          <Library className="size-3.5" />
+          Library
+        </Button>
+        <Button
+          variant={mobilePanel === "config" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMobilePanel((p) => (p === "config" ? null : "config"))}
+        >
+          <SlidersHorizontal className="size-3.5" />
+          Config
+        </Button>
+      </div>
     </main>
   );
 }
@@ -372,6 +402,17 @@ function visibleWidth(s: string): number {
 // would double-count them.
 function mosaicCols(line: string): number {
   return [...line.replace(/\x1b\[[0-9;]*m/g, "")].length;
+}
+
+// A "rule" line (e.g. the divider) is one row of a single repeated horizontal
+// box-drawing glyph. The real status line draws it across the whole terminal, so in
+// the composer it must fill the content width too — not sit at its captured length.
+const RULE_GLYPHS = new Set([..."─━═┄┅┈┉╌╍▔▁"]);
+function ruleGlyphOf(text: string): string | null {
+  const chars = [...text.replace(/\x1b\[[0-9;]*m/g, "").replace(/\n+$/, "").trim()];
+  if (!chars.length) return null;
+  const ch = chars[0];
+  return RULE_GLYPHS.has(ch) && chars.every((c) => c === ch) ? ch : null;
 }
 
 function ComposedTerminal({
@@ -418,6 +459,8 @@ function ComposedTerminal({
     for (const it of items) {
       const c = byId.get(it.id);
       if (!c || it.slot === "row1" || it.slot === "row2") continue;
+      // Rule lines follow the content width, so they don't get to drive it.
+      if (ruleGlyphOf((c.frames?.length ? c.frames[0] : c.preview) || "")) continue;
       m = Math.max(m, widthOf(c));
     }
     for (const slot of ["row1", "row2"] as Slot[]) {
@@ -483,6 +526,7 @@ function ComposedTerminal({
               <EditableLine
                 component={component}
                 octants={octants}
+                maxCols={maxCols}
                 dragging={dragKey === item.key}
                 selected={selectedKey === item.key}
                 onSelect={() => onSelect(item.key)}
@@ -636,6 +680,7 @@ function DropBarV() {
 function EditableLine({
   component,
   octants,
+  maxCols,
   dragging,
   selected,
   onSelect,
@@ -645,6 +690,7 @@ function EditableLine({
 }: {
   component: PlaygroundComponent;
   octants: string;
+  maxCols: number;
   dragging: boolean;
   selected: boolean;
   onSelect: () => void;
@@ -657,6 +703,8 @@ function EditableLine({
   const idx = useFrameCycle(isMosaic ? 0 : frames.length);
   const text = !isMosaic && frames.length ? frames[idx % frames.length] : component.preview;
   const rows = isMosaic ? [] : parseCells((text ?? "").replace(/\n+$/, ""));
+  const rule = isMosaic ? null : ruleGlyphOf(text ?? "");
+  const ruleColor = rule ? rows[0]?.find((c) => c.ch === rule)?.fg ?? undefined : undefined;
 
   return (
     <div
@@ -678,6 +726,13 @@ function EditableLine({
     >
       {isMosaic ? (
         <MosaicCanvas frames={component.frames ?? []} octants={octants} />
+      ) : rule ? (
+        <div
+          className="overflow-hidden whitespace-pre"
+          style={ruleColor ? { color: ruleColor } : undefined}
+        >
+          {rule.repeat(Math.max(1, maxCols))}
+        </div>
       ) : rows.length ? (
         rows.map((cells, i) => (
           <div key={i} className="whitespace-pre">
@@ -986,11 +1041,13 @@ function ConfigFieldRow({
       );
     }
     const numeric = field.type === "number" || field.type === "integer";
+    // Show the effective value (override, else the component's default) so a field
+    // never looks empty/unset — edits replace it; clearing falls back to the default.
+    const shown = value !== undefined ? value : field.default;
     return (
       <input
         type={numeric ? "number" : "text"}
-        value={value === undefined ? "" : String(value)}
-        placeholder={field.default !== undefined ? String(field.default) : undefined}
+        value={shown === undefined || shown === null ? "" : String(shown)}
         onChange={(e) => {
           const raw = e.target.value;
           if (raw === "") onChange(undefined);
