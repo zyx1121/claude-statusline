@@ -93,7 +93,7 @@ in [`plugin/spec/CONTRACT.md`](plugin/spec/CONTRACT.md), with JSON schemas at
   "description": "Context-window usage percentage, turning red at ≥80%.",
   "type": "segment",                       // "segment" | "line"
   "runtime": "bash",                       // "bash" | "python3" | ...
-  "render": { "entry": "render.sh" },      // line widgets may add a "ttl"
+  "render": { "entry": "render.sh" },      // optional "ttl" (segment or line); a profile can override it per-instance
   "inputs": ["context_window.used_percentage"],  // stdin fields the host projects
   "requires": {},                          // { bin, network, macos }
   "config": {},                            // { schema, file } for tunable knobs

@@ -97,13 +97,14 @@ line component 是被 fork 的獨立程式。host 以固定 argv 呼叫 `render.
 輸出：把要顯示的內容印到 **stdout**，可多行（每行就是 statusline 的一行，如 creatures 場景）。
 印空 = 隱藏。stderr 不顯示，可拿來 debug。退出碼非 0 視為失敗，該 line 略過。
 
-### render.ttl
+### ttl（output-cache）
 
-`render.ttl`（預設 `1`）控制 fork 頻率：
+`ttl`（預設 `1`）控制重算頻率，**segment 與 line 都適用**：
 
-- `1`：每 tick 都 fork 一次 render（捲動最滑順）。
-- `>1`：N 秒內重用上次 render 的 stdout、不再 fork。適合輸出變動慢但 render 不便宜的 widget。
-  cache 由 host 管理（路徑 `${STATUSLINE_STATE}/.render.<sid>`）。
+- `1`：每 tick 都重算（segment in-process 呼叫 / line fork）—— 捲動動畫最滑順。
+- `>1`：N 秒內重用上次輸出、不再重算。適合輸出變動慢但不便宜的 component（典型是 fork `git` / `gh` / `osascript` 的 segment）。
+- 來源優先序：**profile 的 per-instance `ttl`** 覆蓋 component manifest 的 `render.ttl`。刷新頻率屬於「這條 statusline 要多即時」的部署決定，故 profile（部署者）優先於 component（作者）。
+- cache 由 host 管理、**原子寫入**（tmp + rename），只 cache **非空**輸出。路徑 `${STATUSLINE_STATE}/.render.<sid>.<order>` —— `<order>` 後綴讓同一 component 在一個 profile 出現多次時（如 5h / 7d 兩個 `ratelimit`）各自獨立不互蓋。
 
 ### fetch（選用，背景刷新）
 

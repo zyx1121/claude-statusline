@@ -31,8 +31,8 @@ CC 餵給 statusline 的是一段 stdin JSON；loader 的 `extract_stdin_fields`
   "model": { "display_name": "Opus 4.8" },
   "context_window": { "used_percentage": 42 },
   "rate_limits": {
-    "five_hour": { "used_percentage": 18, "resets_at": "2026-05-31T18:00:00Z" },
-    "seven_day": { "used_percentage": 63, "resets_at": "2026-06-03T00:00:00Z" }
+    "five_hour": { "used_percentage": 18, "resets_at": 1780308000 },
+    "seven_day": { "used_percentage": 63, "resets_at": 1780488000 }
   },
   "cost": { "total_cost_usd": 1.23 },
   "pr": { "number": 161, "review_state": "open" },
@@ -41,7 +41,7 @@ CC 餵給 statusline 的是一段 stdin JSON；loader 的 `extract_stdin_fields`
 }
 ```
 
-> 投影後 component 只會看到這幾個變數：`CC_MODEL` `CC_CTX_PCT` `CC_FIVE_PCT` `CC_FIVE_RESET` `CC_WEEK_PCT`（來自 `rate_limits.seven_day`）`CC_WEEK_RESET` `CC_COST` `CC_PR_NUM` `CC_PR_STATE`（來自 `pr.review_state`）`CC_SID` `CC_PROJECT_DIR`（`workspace.project_dir` → `workspace.current_dir` → `cwd` fallback）。要驗證投影正確：`./runtime/lib`-source 後 `extract_stdin_fields < "$MOCK"`，看吐出的 `export CC_*` 對不對。鍵名若跟 contract.sh 對不上就照 contract.sh 改 mock，別憑空塞。
+> 投影後 component 只會看到這幾個變數：`CC_MODEL` `CC_CTX_PCT` `CC_FIVE_PCT` `CC_FIVE_RESET` `CC_WEEK_PCT`（來自 `rate_limits.seven_day`）`CC_WEEK_RESET`（`resets_at` 是 **epoch 秒整數**，非 ISO 字串——`fmt_countdown` 直接做算術）`CC_COST` `CC_PR_NUM` `CC_PR_STATE`（來自 `pr.review_state`）`CC_SID` `CC_PROJECT_DIR`（`workspace.project_dir` → `workspace.current_dir` → `cwd` fallback）。要驗證投影正確：`./runtime/lib`-source 後 `extract_stdin_fields < "$MOCK"`，看吐出的 `export CC_*` 對不對。鍵名若跟 contract.sh 對不上就照 contract.sh 改 mock，別憑空塞。
 
 ### 3a. Profile preview — 走完整 loader
 

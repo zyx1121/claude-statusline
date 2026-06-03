@@ -39,16 +39,25 @@ SID="$CC_SID"
 PROFILE="${STATUSLINE_PROFILE:-${PROFILES}/default.json}"
 [ -f "$PROFILE" ] || PROFILE="${PLUGIN_ROOT}/profiles/full.json"
 
+# Opportunistic GC: render-cache files are keyed per (session, order), so ended sessions
+# and changed profiles leave orphans under $STATE that nothing else evicts. Throttle to
+# ~once/hour via a marker (free per tick), then drop cache files untouched for a day.
+gc="${STATE}/.gc"
+if [ ! -f "$gc" ] || [ "$(( $(date +%s) - $(_mtime "$gc") ))" -gt 3600 ]; then
+  : > "$gc"
+  find "$STATE" -name '.render.*' -mtime +1 -delete 2>/dev/null
+fi
+
 # Walk components, bucket outputs by slot. Segments split into left/right by align.
 declare -a ROW1_L ROW1_R ROW2_L ROW2_R TOP MIDDLE BOTTOM
-while IFS=$'\t' read -r id slot order cfg align; do
+while IFS=$'\t' read -r id slot order cfg align ttl; do
   [ -n "$id" ] || continue
   case "$slot" in
-    row1)   out=$(render_segment "$id" "$cfg"); [ -n "$out" ] && { [ "$align" = right ] && ROW1_R+=("$out") || ROW1_L+=("$out"); };;
-    row2)   out=$(render_segment "$id" "$cfg"); [ -n "$out" ] && { [ "$align" = right ] && ROW2_R+=("$out") || ROW2_L+=("$out"); };;
-    top)    out=$(render_widget  "$id" "$cfg" "$COLS" "$SID"); [ -n "$out" ] && TOP+=("$out");;
-    middle) out=$(render_widget  "$id" "$cfg" "$COLS" "$SID"); [ -n "$out" ] && MIDDLE+=("$out");;
-    bottom) out=$(render_widget  "$id" "$cfg" "$COLS" "$SID"); [ -n "$out" ] && BOTTOM+=("$out");;
+    row1)   out=$(render_segment "$id" "$cfg" "$ttl" "$SID" "$order"); [ -n "$out" ] && { [ "$align" = right ] && ROW1_R+=("$out") || ROW1_L+=("$out"); };;
+    row2)   out=$(render_segment "$id" "$cfg" "$ttl" "$SID" "$order"); [ -n "$out" ] && { [ "$align" = right ] && ROW2_R+=("$out") || ROW2_L+=("$out"); };;
+    top)    out=$(render_widget  "$id" "$cfg" "$COLS" "$SID" "$ttl" "$order"); [ -n "$out" ] && TOP+=("$out");;
+    middle) out=$(render_widget  "$id" "$cfg" "$COLS" "$SID" "$ttl" "$order"); [ -n "$out" ] && MIDDLE+=("$out");;
+    bottom) out=$(render_widget  "$id" "$cfg" "$COLS" "$SID" "$ttl" "$order"); [ -n "$out" ] && BOTTOM+=("$out");;
   esac
 done < <(profile_iter "$PROFILE")
 
