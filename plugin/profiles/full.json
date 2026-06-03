@@ -9,14 +9,14 @@
 
     { "id": "model",        "slot": "row1", "order": 10 },
     { "id": "ctx",          "slot": "row1", "order": 20 },
-    { "id": "ratelimit",    "slot": "row1", "order": 30, "config": { "window": "5h" } },
-    { "id": "ratelimit",    "slot": "row1", "order": 31, "config": { "window": "7d" } },
-    { "id": "cost",         "slot": "row1", "order": 40 },
+    { "id": "ratelimit",    "slot": "row1", "order": 30, "config": { "window": "5h" }, "ttl": 30 },
+    { "id": "ratelimit",    "slot": "row1", "order": 31, "config": { "window": "7d" }, "ttl": 30 },
+    { "id": "cost",         "slot": "row1", "order": 40, "ttl": 10 },
 
-    { "id": "git",          "slot": "row2", "order": 10 },
-    { "id": "pr",           "slot": "row2", "order": 20 },
-    { "id": "burn",         "slot": "row2", "order": 30 },
-    { "id": "nowplaying",   "slot": "row2", "order": 40 },
+    { "id": "git",          "slot": "row2", "order": 10, "ttl": 5 },
+    { "id": "pr",           "slot": "row2", "order": 20, "ttl": 15 },
+    { "id": "burn",         "slot": "row2", "order": 30, "ttl": 10 },
+    { "id": "nowplaying",   "slot": "row2", "order": 40, "ttl": 5 },
 
     { "id": "stock-ticker", "slot": "bottom", "order": 10 }
   ]

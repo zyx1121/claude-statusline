@@ -11,7 +11,7 @@ Paths (from the loader + `lib/contract.sh`):
 - shim = `~/.claude/plugins/statusline-loader.sh`
 - user layer = `~/.claude/statusline/` (its `components/` is searched first, then plugin built-ins)
 - active profile = `$STATUSLINE_PROFILE` if set, else `~/.claude/statusline/profiles/default.json`, else the bundled `<plugin>/profiles/full.json` fallback
-- per-component state/cache = `~/.claude/.statusline-state/<id>/` (loader exports this to each component as `STATUSLINE_STATE`; render output-cache lives at `~/.claude/.statusline-state/<id>/.render.<sid>`; a `line` component's `fetch` is `self_managed` and writes its own cache file inside that same dir)
+- per-component state/cache = `~/.claude/.statusline-state/<id>/` (loader exports this to each component as `STATUSLINE_STATE`; render output-cache lives at `~/.claude/.statusline-state/<id>/.render.<sid>.<order>` (the `<order>` suffix disambiguates a component used more than once in one profile); a `line` component's `fetch` is `self_managed` and writes its own cache file inside that same dir)
 - plugin installs = `~/.claude/plugins/cache/*/statusline/<version>/{runtime,plugin/runtime}/` (the shim globs both shapes, `sort -V | tail -1`)
 
 ## Procedure
