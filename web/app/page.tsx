@@ -34,6 +34,7 @@ export default async function Home() {
     needsSecrets: component.needsSecrets,
     hasFetch: component.hasFetch,
     placement: component.placement,
+    configSchema: component.configSchema,
   }));
 
   const profiles: PlaygroundProfile[] = reg.profiles.map((profile) => ({

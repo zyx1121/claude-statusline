@@ -9,7 +9,7 @@ import {
   type DragEvent,
   type ReactNode,
 } from "react";
-import { Library, Plus, Search, X } from "lucide-react";
+import { Library, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 
 import {
   AnimatedPreview,
@@ -36,6 +36,13 @@ const SLOTS: Array<{ id: Slot; label: string }> = [
   { id: "bottom", label: "Bottom" },
 ];
 
+export interface ConfigField {
+  type?: string;
+  enum?: unknown[];
+  default?: unknown;
+  desc?: string;
+}
+
 export interface PlaygroundComponent {
   id: string;
   name: string;
@@ -51,6 +58,7 @@ export interface PlaygroundComponent {
   needsSecrets: boolean;
   hasFetch: boolean;
   placement?: { slot?: string; order?: number };
+  configSchema?: Record<string, ConfigField>;
 }
 
 export interface PlaygroundProfile {
@@ -92,6 +100,7 @@ export function StatuslinePlayground({
   );
   const [query, setQuery] = useState("");
   const [dragKey, setDragKey] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const selectedIds = useMemo(() => new Set(items.map((item) => item.id)), [items]);
   const missingSlots = useMemo(
@@ -163,6 +172,7 @@ export function StatuslinePlayground({
   function removeItem(key: string) {
     setSelectedProfile("custom");
     setItems((current) => current.filter((item) => item.key !== key));
+    setSelectedKey((current) => (current === key ? null : current));
   }
 
   // Drag-to-reorder: drop `key` into `slot` at `index` within its (slot, align)
@@ -192,44 +202,66 @@ export function StatuslinePlayground({
     });
   }
 
-  return (
-    <main className="relative left-1/2 flex h-[calc(100dvh-3.5rem)] w-dvw -translate-x-1/2 flex-col overflow-hidden border-t border-foreground/10 bg-background lg:flex-row">
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6">
-        <div
-          ref={fitRef}
-          className="flex min-h-0 flex-1 items-center justify-center overflow-hidden"
-        >
-          <TerminalSurface className="flex max-h-full max-w-full flex-col overflow-hidden">
-            <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
-              <span className="size-3 rounded-full bg-[#ff5f57]" />
-              <span className="size-3 rounded-full bg-[#febc2e]" />
-              <span className="size-3 rounded-full bg-[#28c840]" />
-              <span className="ml-2 font-mono text-[11px] text-neutral-500">
-                {profile.name}.json
-              </span>
-              <CopyButton
-                value={installPrompt}
-                label="Copy install prompt"
-                copiedLabel="Prompt copied"
-                className="ml-auto size-7 text-neutral-500 hover:bg-white/5 hover:text-neutral-200"
-              />
-            </div>
-            <div className="min-h-0 overflow-auto px-3.5 pb-4 pt-6">
-              <ComposedTerminal
-                items={items}
-                byId={byId}
-                octants={octants}
-                availWidth={availWidth}
-                dragKey={dragKey}
-                onDragStart={setDragKey}
-                onDragEnd={() => setDragKey(null)}
-                onMoveTo={moveTo}
-              />
-            </div>
-          </TerminalSurface>
-        </div>
-      </section>
+  // Config edits land on the placed instance (a profile component carries its own
+  // config). They flow into the copied install prompt via buildProfile — the live
+  // preview is a captured snapshot and does not re-render.
+  function updateConfig(itemKey: string, field: string, value: unknown) {
+    setSelectedProfile("custom");
+    setItems((current) =>
+      current.map((item) => {
+        if (item.key !== itemKey) return item;
+        const config = { ...(item.config ?? {}) };
+        if (value === undefined) delete config[field];
+        else config[field] = value;
+        return { ...item, config: Object.keys(config).length ? config : undefined };
+      }),
+    );
+  }
 
+  const selectedItem = items.find((item) => item.key === selectedKey) ?? null;
+  const selectedComponent = selectedItem ? byId.get(selectedItem.id) ?? null : null;
+
+  return (
+    <main className="relative left-1/2 flex h-[calc(100dvh-3.5rem)] w-dvw -translate-x-1/2 flex-col overflow-hidden border-t border-foreground/10 bg-background lg:block">
+      {/* Terminal canvas — the focus. On desktop it sits in the clear column between
+          the two floating panels; on mobile it's the top of a stacked column. */}
+      <div
+        ref={fitRef}
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4 sm:p-6 lg:absolute lg:inset-y-0 lg:left-[372px] lg:right-[372px] lg:flex-none lg:px-0 lg:py-5"
+      >
+        <TerminalSurface className="flex max-h-full max-w-full flex-col overflow-hidden">
+          <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
+            <span className="size-3 rounded-full bg-[#ff5f57]" />
+            <span className="size-3 rounded-full bg-[#febc2e]" />
+            <span className="size-3 rounded-full bg-[#28c840]" />
+            <span className="ml-2 font-mono text-[11px] text-neutral-500">
+              {profile.name}.json
+            </span>
+            <CopyButton
+              value={installPrompt}
+              label="Copy install prompt"
+              copiedLabel="Prompt copied"
+              className="ml-auto size-7 text-neutral-500 hover:bg-white/5 hover:text-neutral-200"
+            />
+          </div>
+          <div className="min-h-0 overflow-auto px-3.5 pb-4 pt-6">
+            <ComposedTerminal
+              items={items}
+              byId={byId}
+              octants={octants}
+              availWidth={availWidth}
+              dragKey={dragKey}
+              selectedKey={selectedKey}
+              onSelect={setSelectedKey}
+              onDragStart={setDragKey}
+              onDragEnd={() => setDragKey(null)}
+              onMoveTo={moveTo}
+            />
+          </div>
+        </TerminalSurface>
+      </div>
+
+      {/* Left overlay — component library */}
       <aside
         onDragOver={(e) => {
           if (dragKey) e.preventDefault();
@@ -241,7 +273,8 @@ export function StatuslinePlayground({
           setDragKey(null);
         }}
         className={cn(
-          "relative flex h-[42dvh] min-h-0 shrink-0 border-t border-foreground/10 bg-block/70 transition-colors lg:h-auto lg:w-[440px] lg:flex-col lg:border-l lg:border-t-0",
+          "relative z-10 flex max-h-[42dvh] min-h-0 shrink-0 flex-col border-t border-foreground/10 bg-block/70 transition-colors",
+          "lg:absolute lg:inset-y-4 lg:left-4 lg:max-h-none lg:w-[340px] lg:rounded-2xl lg:border lg:border-foreground/10 lg:bg-background/80 lg:shadow-xl lg:shadow-black/20 lg:backdrop-blur",
           dragKey && "bg-red-500/[0.04]",
         )}
       >
@@ -253,41 +286,56 @@ export function StatuslinePlayground({
             </span>
           </div>
         ) : null}
-        <div className="flex min-h-0 w-full flex-col">
-          <div className="space-y-3 border-b border-foreground/10 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Library className="size-4 text-foreground/60" />
-                <h2 className="font-mono text-sm font-semibold">Component library</h2>
-              </div>
-              <Badge variant="secondary" className="text-[10px]">
-                {stats.components} items
-              </Badge>
+        <div className="space-y-3 border-b border-foreground/10 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Library className="size-4 text-foreground/60" />
+              <h2 className="font-mono text-sm font-semibold">Component library</h2>
             </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/40" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search components"
-                className="corner-token h-10 w-full rounded-xl bg-background pl-9 pr-3 text-sm outline-none ring-1 ring-foreground/10 transition focus:ring-foreground/30"
-              />
-            </div>
+            <Badge variant="secondary" className="text-[10px]">
+              {stats.components} items
+            </Badge>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              {library.map((component) => (
-                <LibraryItem
-                  key={component.id}
-                  component={component}
-                  octants={octants}
-                  recommended={recommendScore(component, selectedIds, missingSlots) >= 5}
-                  onAdd={() => addComponent(component.id)}
-                />
-              ))}
-            </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/40" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search components"
+              className="corner-token h-10 w-full rounded-xl bg-background pl-9 pr-3 text-sm outline-none ring-1 ring-foreground/10 transition focus:ring-foreground/30"
+            />
           </div>
         </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            {library.map((component) => (
+              <LibraryItem
+                key={component.id}
+                component={component}
+                octants={octants}
+                selected={selectedComponent?.id === component.id}
+                recommended={recommendScore(component, selectedIds, missingSlots) >= 5}
+                onAdd={() => addComponent(component.id)}
+              />
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      {/* Right overlay — config for the selected component */}
+      <aside
+        className={cn(
+          "relative z-10 max-h-[42dvh] min-h-0 shrink-0 flex-col border-t border-foreground/10 bg-block/70",
+          "lg:absolute lg:inset-y-4 lg:right-4 lg:flex lg:max-h-none lg:w-[340px] lg:rounded-2xl lg:border lg:border-foreground/10 lg:bg-background/80 lg:shadow-xl lg:shadow-black/20 lg:backdrop-blur",
+          selectedItem ? "flex" : "hidden lg:flex",
+        )}
+      >
+        <ConfigPanel
+          item={selectedItem}
+          component={selectedComponent}
+          onChange={updateConfig}
+          onClose={() => setSelectedKey(null)}
+        />
       </aside>
     </main>
   );
@@ -332,6 +380,8 @@ function ComposedTerminal({
   octants,
   availWidth,
   dragKey,
+  selectedKey,
+  onSelect,
   onDragStart,
   onDragEnd,
   onMoveTo,
@@ -341,6 +391,8 @@ function ComposedTerminal({
   octants: string;
   availWidth: number;
   dragKey: string | null;
+  selectedKey: string | null;
+  onSelect: (key: string) => void;
   onDragStart: (key: string) => void;
   onDragEnd: () => void;
   onMoveTo: (key: string, slot: Slot, align: "left" | "right", index: number) => void;
@@ -388,9 +440,9 @@ function ComposedTerminal({
   if (!items.length) {
     return (
       <div className="flex h-full min-h-[12rem] items-center justify-center px-6 text-center font-mono text-xs text-neutral-600">
-        Pick a profile above, or add components from the library — they compose
-        here exactly as the status line renders them. Drag any piece to reorder,
-        or drag it back to the library to remove it.
+        Add components from the library — they compose here exactly as the status
+        line renders them. Click a piece to configure it, drag to reorder, or drag
+        it back to the library to remove it.
       </div>
     );
   }
@@ -432,6 +484,8 @@ function ComposedTerminal({
                 component={component}
                 octants={octants}
                 dragging={dragKey === item.key}
+                selected={selectedKey === item.key}
+                onSelect={() => onSelect(item.key)}
                 onDragStart={() => onDragStart(item.key)}
                 onDragEnd={endDrag}
                 onDragOver={
@@ -516,6 +570,8 @@ function ComposedTerminal({
               component={component}
               dataAlign={align}
               dragging={dragKey === item.key}
+              selected={selectedKey === item.key}
+              onSelect={() => onSelect(item.key)}
               onDragStart={() => onDragStart(item.key)}
               onDragEnd={endDrag}
             />
@@ -581,6 +637,8 @@ function EditableLine({
   component,
   octants,
   dragging,
+  selected,
+  onSelect,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -588,6 +646,8 @@ function EditableLine({
   component: PlaygroundComponent;
   octants: string;
   dragging: boolean;
+  selected: boolean;
+  onSelect: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
   onDragOver?: (e: DragEvent<HTMLDivElement>) => void;
@@ -601,6 +661,7 @@ function EditableLine({
   return (
     <div
       draggable
+      onClick={onSelect}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         onDragStart();
@@ -608,7 +669,10 @@ function EditableLine({
       onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       className={cn(
-        "w-full cursor-grab rounded px-1 transition-colors hover:bg-white/[0.04] active:cursor-grabbing",
+        "w-full cursor-grab rounded px-1 ring-1 ring-inset transition-colors active:cursor-grabbing",
+        selected
+          ? "bg-sky-400/10 ring-sky-400/60"
+          : "ring-transparent hover:bg-white/[0.04]",
         dragging && "opacity-40",
       )}
     >
@@ -631,12 +695,16 @@ function EditableSegment({
   component,
   dataAlign,
   dragging,
+  selected,
+  onSelect,
   onDragStart,
   onDragEnd,
 }: {
   component: PlaygroundComponent;
   dataAlign: "left" | "right";
   dragging: boolean;
+  selected: boolean;
+  onSelect: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
 }) {
@@ -650,13 +718,17 @@ function EditableSegment({
       data-seg
       data-align={dataAlign}
       draggable
+      onClick={onSelect}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         onDragStart();
       }}
       onDragEnd={onDragEnd}
       className={cn(
-        "inline-flex cursor-grab items-center whitespace-pre rounded px-1.5 transition-colors hover:bg-white/[0.06] active:cursor-grabbing",
+        "inline-flex cursor-grab items-center whitespace-pre rounded px-1.5 ring-1 ring-inset transition-colors active:cursor-grabbing",
+        selected
+          ? "bg-sky-400/10 ring-sky-400/60"
+          : "ring-transparent hover:bg-white/[0.06]",
         dragging && "opacity-40",
       )}
     >
@@ -709,11 +781,13 @@ function MosaicCanvas({
 function LibraryItem({
   component,
   octants,
+  selected,
   recommended,
   onAdd,
 }: {
   component: PlaygroundComponent;
   octants: string;
+  selected: boolean;
   recommended: boolean;
   onAdd: () => void;
 }) {
@@ -721,7 +795,14 @@ function LibraryItem({
   const hasText =
     !mosaic && Boolean(component.frames?.length || component.preview.trim());
   return (
-    <div className="corner-token rounded-xl bg-background p-3 ring-1 ring-foreground/10 transition hover:ring-foreground/20">
+    <div
+      className={cn(
+        "corner-token rounded-xl bg-background p-3 ring-1 transition",
+        selected
+          ? "ring-sky-400/60"
+          : "ring-foreground/10 hover:ring-foreground/20",
+      )}
+    >
       {mosaic ? (
         <MosaicPreview
           frames={component.frames ?? []}
@@ -778,6 +859,162 @@ function LibraryItem({
           </Badge>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// ---------- config panel ----------
+
+function ConfigPanel({
+  item,
+  component,
+  onChange,
+  onClose,
+}: {
+  item: BuilderItem | null;
+  component: PlaygroundComponent | null;
+  onChange: (itemKey: string, field: string, value: unknown) => void;
+  onClose: () => void;
+}) {
+  const entries = Object.entries(component?.configSchema ?? {});
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3 border-b border-foreground/10 p-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <SlidersHorizontal className="size-4 shrink-0 text-foreground/60" />
+          <h2 className="truncate font-mono text-sm font-semibold">
+            {component ? component.name : "Configure"}
+          </h2>
+        </div>
+        {item ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-7 px-0 text-foreground/60"
+            aria-label="Deselect component"
+            onClick={onClose}
+          >
+            <X className="size-4" />
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {!item || !component ? (
+          <p className="text-sm leading-6 text-foreground/50">
+            Click a component in the terminal to adjust its parameters. Values are
+            written into the copied install prompt — the preview is a captured
+            snapshot and won&apos;t re-render.
+          </p>
+        ) : entries.length === 0 ? (
+          <p className="text-sm leading-6 text-foreground/50">
+            <span className="font-mono text-foreground/70">{component.id}</span> has no
+            configurable parameters.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            <p className="text-[11px] leading-5 text-foreground/40">
+              Edits flow into the install prompt, not the live preview.
+            </p>
+            {entries.map(([key, field]) => (
+              <ConfigFieldRow
+                key={key}
+                name={key}
+                field={field}
+                value={item.config?.[key]}
+                onChange={(value) => onChange(item.key, key, value)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+const INPUT_CLS =
+  "corner-token h-9 w-full rounded-lg bg-background px-3 text-sm outline-none ring-1 ring-foreground/10 transition focus:ring-foreground/30";
+
+function ConfigFieldRow({
+  name,
+  field,
+  value,
+  onChange,
+}: {
+  name: string;
+  field: ConfigField;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const control = (() => {
+    if (Array.isArray(field.enum) && field.enum.length) {
+      return (
+        <select
+          value={String(value ?? field.default ?? "")}
+          onChange={(e) => onChange(e.target.value)}
+          className={INPUT_CLS}
+        >
+          {field.enum.map((opt) => (
+            <option key={String(opt)} value={String(opt)}>
+              {String(opt)}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (field.type === "boolean") {
+      const on = typeof value === "boolean" ? value : Boolean(field.default);
+      return (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          onClick={() => onChange(!on)}
+          className={cn(
+            "relative h-6 w-10 rounded-full ring-1 transition-colors",
+            on ? "bg-sky-400/80 ring-sky-400/30" : "bg-foreground/10 ring-foreground/15",
+          )}
+        >
+          <span
+            className={cn(
+              "absolute top-0.5 size-5 rounded-full bg-background transition-transform",
+              on ? "translate-x-[18px]" : "translate-x-0.5",
+            )}
+          />
+        </button>
+      );
+    }
+    const numeric = field.type === "number" || field.type === "integer";
+    return (
+      <input
+        type={numeric ? "number" : "text"}
+        value={value === undefined ? "" : String(value)}
+        placeholder={field.default !== undefined ? String(field.default) : undefined}
+        onChange={(e) => {
+          const raw = e.target.value;
+          if (raw === "") onChange(undefined);
+          else onChange(numeric ? Number(raw) : raw);
+        }}
+        className={INPUT_CLS}
+      />
+    );
+  })();
+
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center gap-2 font-mono text-xs font-medium">
+        {name}
+        {field.type ? (
+          <span className="text-[10px] font-normal text-foreground/40">
+            {field.type}
+          </span>
+        ) : null}
+      </label>
+      {control}
+      {field.desc ? (
+        <p className="text-[11px] leading-4 text-foreground/50">{field.desc}</p>
+      ) : null}
     </div>
   );
 }
