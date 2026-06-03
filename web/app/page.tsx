@@ -47,7 +47,6 @@ export default async function Home() {
       components={components}
       profiles={profiles}
       octants={octants}
-      live={reg.live}
       stats={{ components: reg.components.length, authors: reg.byAuthor.length }}
     />
   );

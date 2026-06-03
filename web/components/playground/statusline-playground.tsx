@@ -9,7 +9,7 @@ import {
   type DragEvent,
   type ReactNode,
 } from "react";
-import { Library, Plus, Search, Sparkles, Terminal, X } from "lucide-react";
+import { Library, Plus, Search, X } from "lucide-react";
 
 import {
   cellSpans,
@@ -75,13 +75,11 @@ export function StatuslinePlayground({
   components,
   profiles,
   octants,
-  live,
   stats,
 }: {
   components: PlaygroundComponent[];
   profiles: PlaygroundProfile[];
   octants: string;
-  live: boolean;
   stats: { components: number; authors: number };
 }) {
   const byId = useMemo(() => new Map(components.map((c) => [c.id, c])), [components]);
@@ -91,7 +89,6 @@ export function StatuslinePlayground({
     profileToItems(defaultProfile, byId),
   );
   const [query, setQuery] = useState("");
-  const [type, setType] = useState<"all" | "segment" | "line">("all");
   const [dragKey, setDragKey] = useState<string | null>(null);
 
   const selectedIds = useMemo(() => new Set(items.map((item) => item.id)), [items]);
@@ -107,7 +104,6 @@ export function StatuslinePlayground({
     const q = query.trim().toLowerCase();
     return components
       .filter((component) => {
-        if (type !== "all" && component.type !== type) return false;
         if (!q) return true;
         return [
           component.id,
@@ -128,13 +124,28 @@ export function StatuslinePlayground({
             recommendScore(a, selectedIds, missingSlots) ||
           a.name.localeCompare(b.name),
       );
-  }, [components, missingSlots, query, selectedIds, type]);
+  }, [components, missingSlots, query, selectedIds]);
 
   const profile = useMemo(
     () => buildProfile(items, byId, selectedProfile),
     [byId, items, selectedProfile],
   );
   const installPrompt = useMemo(() => buildInstallPrompt(profile), [profile]);
+
+  // The terminal box shrinks to its content, so it can't measure its own width to
+  // fit the font (that would feed back on itself). Measure the stable centering
+  // wrapper instead and hand the usable width down to the composer.
+  const fitRef = useRef<HTMLDivElement>(null);
+  const [availWidth, setAvailWidth] = useState(640);
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const measure = () => setAvailWidth(Math.max(160, el.clientWidth - 32));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   function applyProfile(profileName: string) {
     const next = profiles.find((p) => p.name === profileName);
@@ -192,66 +203,57 @@ export function StatuslinePlayground({
 
   return (
     <main className="relative left-1/2 flex h-[calc(100dvh-3.5rem)] w-dvw -translate-x-1/2 flex-col overflow-hidden border-t border-foreground/10 bg-background lg:flex-row">
-      <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Badge variant="outline" className="mb-3 gap-1.5 font-mono text-xs">
-              <Terminal className="size-3.5" />
-              playground
-            </Badge>
-            <h1 className="font-mono text-2xl font-semibold tracking-tight sm:text-3xl">
-              claude-statusline
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-foreground/60">
-              {stats.components} components · {stats.authors} authors ·{" "}
-              {live ? "live registry" : "snapshot registry"}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {profiles.slice(0, 4).map((p) => (
-              <Button
-                key={p.name}
-                variant={selectedProfile === p.name ? "default" : "outline"}
-                size="sm"
-                onClick={() => applyProfile(p.name)}
-              >
-                {p.name}
-              </Button>
-            ))}
-            <Button variant="ghost" size="sm" onClick={clearItems}>
-              <X className="size-3.5" />
-              Clear
+      <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {profiles.slice(0, 4).map((p) => (
+            <Button
+              key={p.name}
+              variant={selectedProfile === p.name ? "default" : "outline"}
+              size="sm"
+              onClick={() => applyProfile(p.name)}
+            >
+              {p.name}
             </Button>
-          </div>
+          ))}
+          <Button variant="ghost" size="sm" onClick={clearItems}>
+            <X className="size-3.5" />
+            Clear
+          </Button>
         </div>
 
-        <TerminalSurface className="flex min-h-[520px] flex-1 flex-col overflow-hidden">
-          <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
-            <span className="size-3 rounded-full bg-[#ff5f57]" />
-            <span className="size-3 rounded-full bg-[#febc2e]" />
-            <span className="size-3 rounded-full bg-[#28c840]" />
-            <span className="ml-2 font-mono text-[11px] text-neutral-500">
-              {profile.name}.json
-            </span>
-            <CopyButton
-              value={installPrompt}
-              label="Copy install prompt"
-              copiedLabel="Prompt copied"
-              className="ml-auto size-7 text-neutral-500 hover:bg-white/5 hover:text-neutral-200"
-            />
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto px-3.5 pb-4 pt-6">
-            <ComposedTerminal
-              items={items}
-              byId={byId}
-              octants={octants}
-              dragKey={dragKey}
-              onDragStart={setDragKey}
-              onDragEnd={() => setDragKey(null)}
-              onMoveTo={moveTo}
-            />
-          </div>
-        </TerminalSurface>
+        <div
+          ref={fitRef}
+          className="flex min-h-0 flex-1 items-center justify-center overflow-hidden"
+        >
+          <TerminalSurface className="flex max-h-full max-w-full flex-col overflow-hidden">
+            <div className="flex items-center gap-1.5 border-b border-white/5 px-3.5 py-2.5">
+              <span className="size-3 rounded-full bg-[#ff5f57]" />
+              <span className="size-3 rounded-full bg-[#febc2e]" />
+              <span className="size-3 rounded-full bg-[#28c840]" />
+              <span className="ml-2 font-mono text-[11px] text-neutral-500">
+                {profile.name}.json
+              </span>
+              <CopyButton
+                value={installPrompt}
+                label="Copy install prompt"
+                copiedLabel="Prompt copied"
+                className="ml-auto size-7 text-neutral-500 hover:bg-white/5 hover:text-neutral-200"
+              />
+            </div>
+            <div className="min-h-0 overflow-auto px-3.5 pb-4 pt-6">
+              <ComposedTerminal
+                items={items}
+                byId={byId}
+                octants={octants}
+                availWidth={availWidth}
+                dragKey={dragKey}
+                onDragStart={setDragKey}
+                onDragEnd={() => setDragKey(null)}
+                onMoveTo={moveTo}
+              />
+            </div>
+          </TerminalSurface>
+        </div>
       </section>
 
       <aside
@@ -297,23 +299,6 @@ export function StatuslinePlayground({
                 className="corner-token h-10 w-full rounded-xl bg-background pl-9 pr-3 text-sm outline-none ring-1 ring-foreground/10 transition focus:ring-foreground/30"
               />
             </div>
-            <div className="flex gap-1">
-              {(["all", "segment", "line"] as const).map((next) => (
-                <Button
-                  key={next}
-                  variant={type === next ? "default" : "ghost"}
-                  size="sm"
-                  className="h-7 px-2.5 text-xs"
-                  onClick={() => setType(next)}
-                >
-                  {next}
-                </Button>
-              ))}
-            </div>
-            <p className="flex items-center gap-1.5 text-xs text-foreground/60">
-              <Sparkles className="size-3.5" />
-              Recommended first · click + to add
-            </p>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -326,9 +311,6 @@ export function StatuslinePlayground({
                 />
               ))}
             </div>
-          </div>
-          <div className="border-t border-foreground/10 p-3 text-xs text-foreground/60">
-            {live ? "Live registry" : "Snapshot registry"} · {stats.authors} authors
           </div>
         </div>
       </aside>
@@ -373,6 +355,7 @@ function ComposedTerminal({
   items,
   byId,
   octants,
+  availWidth,
   dragKey,
   onDragStart,
   onDragEnd,
@@ -381,20 +364,19 @@ function ComposedTerminal({
   items: BuilderItem[];
   byId: Map<string, PlaygroundComponent>;
   octants: string;
+  availWidth: number;
   dragKey: string | null;
   onDragStart: (key: string) => void;
   onDragEnd: () => void;
   onMoveTo: (key: string, slot: Slot, align: "left" | "right", index: number) => void;
 }) {
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const [fontSize, setFontSize] = useState(13);
   const [drop, setDrop] = useState<{
     slot: Slot;
     align: "left" | "right";
     index: number;
   } | null>(null);
 
-  // Fixed terminal box, content scales to fit: widest line drives the font size.
+  // Content scales to fit the available width: widest line drives the font size.
   // Mosaic widgets count too — they render onto a char grid (cols×rows cells) and
   // must scale with it, so their widest row participates. A segment row's width is
   // the sum of its segments + separators.
@@ -424,18 +406,9 @@ function ComposedTerminal({
     return m;
   }, [items, byId]);
 
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const fit = () => {
-      const w = el.clientWidth - 8;
-      setFontSize(Math.max(8, Math.min(18, w / (maxCols * 0.6))));
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [maxCols]);
+  // Width comes from the centered wrapper (passed in), not the box itself — the box
+  // shrinks to content, so measuring it would feed the font size back on itself.
+  const fontSize = Math.max(8, Math.min(18, availWidth / (maxCols * 0.6)));
 
   if (!items.length) {
     return (
@@ -605,7 +578,6 @@ function ComposedTerminal({
 
   return (
     <div
-      ref={bodyRef}
       className="font-mono text-neutral-300"
       style={{ fontSize: `${fontSize}px`, lineHeight: 1.3 }}
     >
