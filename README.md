@@ -136,15 +136,22 @@ The status line is built to be operated by the assistant standing right next to 
 
 ## Contributing
 
-New components are welcome. Open a PR adding a `plugin/components/<id>/` directory with:
+New components are welcome — the marketplace is **federated**, so the usual path keeps your
+component in **your own repo** and just indexes it here:
 
-- `component.json` — a manifest validating against
-  [`plugin/spec/component.schema.json`](plugin/spec/component.schema.json) (`"statusline/component@1"`)
-- a renderer (`render.sh` for a segment, `render.py` / an executable for a line)
-- a `README.md` describing what it shows, its inputs, and its config
+1. Put your component under `components/<id>/` in a repo of your own — `component.json`
+   (validating against [`plugin/spec/component.schema.json`](plugin/spec/component.schema.json),
+   `"statusline/component@1"`), a renderer (`render.sh` for a segment, `render.py` / an executable
+   for a line), a `README.md`, and a `preview.txt`.
+2. Add your repo as a source in [`registry.json`](registry.json) and open a PR.
 
-Follow [`plugin/spec/CONTRACT.md`](plugin/spec/CONTRACT.md) and keep components self-contained — no
-host changes needed to drop one in.
+CI validates every component against the spec; once it's merged the site lists it automatically and
+users install it with `/statusline:install <id>`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the
+full walkthrough and [`plugin/spec/CONTRACT.md`](plugin/spec/CONTRACT.md) for the render/fetch contract.
+
+To contribute into the **official built-in set** instead, open a PR adding the component directly
+under [`plugin/components/<id>/`](plugin/components) in this repo — same manifest and spec, it just
+ships with the plugin.
 
 ## License
 
