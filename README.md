@@ -1,17 +1,12 @@
 # claude-statusline
 
-A Claude-native, modular status line for Claude Code. Compose it from small, self-contained
-components — and let Claude read, vet, and tune them for you.
+> A Claude-native, modular status line for Claude Code — compose it from small, self-contained components, and let Claude read, vet, and tune them for you.
 
-## What it is
+`multi-line` · `composable components` · `profile-driven` · `installed from inside Claude` · `federated marketplace`
 
-`claude-statusline` is a Claude Code plugin that replaces the single-line status bar with a
-multi-line, component-based one. Each piece — a context bar, a rate-limit countdown, a news ticker,
-a little ASCII creature — is an independent **component**. A **profile** is a template that picks
-which components run and where they sit. Swap the profile, drop in a new component, and the line
-re-composes itself.
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://github.com/zyx1121/claude-statusline) &nbsp;[![Live playground](https://img.shields.io/badge/playground-statusline.zyx.tw-111111)](https://statusline.zyx.tw) &nbsp;[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](#license)
 
-```
+```text
 📰  Breaking ……… latest headlines scrolling across the top …………………………
 ────────────────────────────────────────────────────────────────────
         ▟▙              ▗▄▖
@@ -23,8 +18,7 @@ re-composes itself.
  0050 ▲131.05   2353 ▼ 78.40   2382 ▲142.00   3231 ▲ 24.95   TAIEX ▲
 ```
 
-That's the `full` profile: a news widget on `top`, a rule, the creatures stage in `middle`, a
-session row (`row1`) and a repo/usage row (`row2`), and a stock ticker at the `bottom`.
+<sub>That's the **`full`** profile — a news ticker on `top`, a creatures stage in the `middle`, a session row and a repo/usage row, and a stock ticker on the `bottom`. Every line is an independent **component**; swap the profile and the line re-composes itself.</sub>
 
 ## Install
 
@@ -34,23 +28,15 @@ session row (`row1`) and a repo/usage row (`row2`), and a stock ticker at the `b
 /statusline:setup
 ```
 
-`/statusline:setup` installs a stable shim, points `settings.json`'s `statusLine.command` at it,
-creates your user layer, and previews the result. (Claude Code can't expand a plugin path inside
-`statusLine.command`, and the plugin cache path is version-numbered and churns on every update — so
-the shim resolves the latest installed version at runtime, and you only wire it once.)
+`/statusline:setup` installs a stable shim, points `settings.json`'s `statusLine.command` at it, creates your user layer, and previews the result. (Claude Code can't expand a plugin path inside `statusLine.command`, and the plugin cache path is version-numbered and churns on every update — so the shim resolves the latest installed version at runtime, and you only wire it once.)
+
+> Browse, preview, and copy an install command for every component at **[statusline.zyx.tw](https://statusline.zyx.tw)**.
 
 ## Concepts
 
-- **Component** — one widget or segment: a directory under `components/<id>/` with a
-  `component.json` manifest and a renderer (`render.sh` or `render.py`). It reads a fixed set of
-  `CC_*` inputs and emits its own piece of the line.
-- **Profile** — a template that composes components. It declares which components to run, which
-  slot each sits in, their order, and per-instance config. The same component can appear more than
-  once (e.g. a 5h and a 7d `ratelimit` segment, distinguished by order + config). Profiles are
-  JSON; `full` and `minimal` ship as examples.
-- **Marketplace** — components are distributed like plugins. Install this plugin's built-ins, or
-  drop a component into your **user layer** (`~/.claude/statusline/components/<id>`), which is
-  searched first and overrides a built-in of the same id.
+- **Component** — one widget or segment: a directory under `components/<id>/` with a `component.json` manifest and a renderer (`render.sh` or `render.py`). It reads a fixed set of `CC_*` inputs and emits its own piece of the line.
+- **Profile** — a template that composes components: which run, which slot each sits in, their order, and per-instance config. The same component can appear more than once (e.g. a 5h and a 7d `ratelimit`, distinguished by order + config). `full` and `minimal` ship as examples.
+- **Marketplace** — components are distributed like plugins. Install the built-ins, or drop a component into your **user layer** (`~/.claude/statusline/components/<id>`), which is searched first and overrides a built-in of the same id.
 
 ### Slots
 
@@ -73,15 +59,32 @@ The line is built top to bottom from named slots:
 | `git` | segment | branch + dirty / ahead / behind state |
 | `pr` | segment | open PR number + CI / review state |
 | `nowplaying` | segment | now-playing track (macOS) |
+| `divider` | line | a full-width horizontal rule — drop in any line slot |
 | `news` | line | scrolling headlines ticker |
 | `creatures` | line | a tiny ASCII creature world that paces the line |
 | `stock-ticker` | line | left-scrolling TWSE stock ticker (keyless) |
 
+## The Claude-native angle
+
+A component is self-describing — its `component.json` declares what inputs it reads, what it requires (`bin` / `network` / `macos`), its capabilities, and its config schema. That's the contract Claude reads to **vet, install, and tune** a component on your behalf:
+
+- **`/statusline:install <component>`** — Claude reads the source, summarises what it shows / which hosts it contacts / what it needs / its render cost, confirms with you, then installs it into your user layer and wires it into your profile. `<component>` can be a built-in id, a **registry id** (a third-party component listed in the marketplace), an `owner/repo`, a git URL, or a local path.
+- **`/statusline:configure <component>`** — tune its config knobs (written to the user layer, never the component dir).
+- **`/statusline:preview` / `/statusline:doctor`** — dry-run a component or profile, or health-check the whole install.
+
+The status line is built to be operated by the assistant standing right next to it.
+
 ## Writing a component
 
-A component is a directory with a `component.json` manifest and a renderer. The interface is spec'd
-in [`plugin/spec/CONTRACT.md`](plugin/spec/CONTRACT.md), with JSON schemas at
-[`plugin/spec/`](plugin/spec); the short version of the manifest:
+A component is a directory with a `component.json` manifest and a renderer — no host changes needed to drop one in. Two kinds:
+
+- **segment** — the host *sources* your `render.sh` and calls `render__<id>()` in-process (zero fork). It reads `CC_*` env plus its config JSON and returns its string in `REPLY` (empty = hidden). Ideal for cheap, always-on bits in `row1` / `row2`.
+- **line** — a standalone executable, forked as `<runtime> render.py <cols> --session <sid> [--key val …]`, that prints one or more whole lines to `top` / `middle` / `bottom`. It may declare a background `fetch` — run on its own TTL — so network work never blocks rendering.
+
+Full render/fetch contract: [`plugin/spec/CONTRACT.md`](plugin/spec/CONTRACT.md), with JSON schemas in [`plugin/spec/`](plugin/spec). Start from [`components/ctx`](plugin/components/ctx) for a segment or [`components/stock-ticker`](plugin/components/stock-ticker) for a line widget with a fetch step.
+
+<details>
+<summary><b><code>component.json</code> at a glance</b></summary>
 
 ```jsonc
 {
@@ -93,7 +96,7 @@ in [`plugin/spec/CONTRACT.md`](plugin/spec/CONTRACT.md), with JSON schemas at
   "description": "Context-window usage percentage, turning red at ≥80%.",
   "type": "segment",                       // "segment" | "line"
   "runtime": "bash",                       // "bash" | "python3" | ...
-  "render": { "entry": "render.sh" },      // optional "ttl" (segment or line); a profile can override it per-instance
+  "render": { "entry": "render.sh" },      // optional "ttl"; a profile can override it per-instance
   "inputs": ["context_window.used_percentage"],  // stdin fields the host projects
   "requires": {},                          // { bin, network, macos }
   "config": {},                            // { schema, file } for tunable knobs
@@ -102,37 +105,9 @@ in [`plugin/spec/CONTRACT.md`](plugin/spec/CONTRACT.md), with JSON schemas at
 }
 ```
 
-**Two types:**
+Components only ever see the projected `CC_*` inputs (`CC_MODEL`, `CC_CTX_PCT`, `CC_FIVE_PCT`, `CC_FIVE_RESET`, `CC_WEEK_PCT`, `CC_WEEK_RESET`, `CC_COST`, `CC_PR_NUM`, `CC_PR_STATE`, `CC_SID`, `CC_PROJECT_DIR`) — never raw stdin. That projection is the security boundary.
 
-- **segment** — the host *sources* your `render.sh` and calls `render__<id>()` in-process (zero
-  fork). It reads `CC_*` env vars plus its config JSON (`$1`) and returns its string in `REPLY`
-  (empty = hidden). Ideal for cheap, always-on bits.
-- **line** — a standalone executable forked as `<runtime> render.py <cols> --session <sid>
-  [--key val …]`. It prints its line(s) to stdout (may be multiple). A line component may declare a
-  `fetch` entry — a separate executable run in the background on its own TTL — so network work
-  never blocks rendering. Honour `render.ttl` to cache output across ticks.
-
-Components only ever see the projected `CC_*` inputs (`CC_MODEL`, `CC_CTX_PCT`, `CC_FIVE_PCT`,
-`CC_FIVE_RESET`, `CC_WEEK_PCT`, `CC_WEEK_RESET`, `CC_COST`, `CC_PR_NUM`, `CC_PR_STATE`, `CC_SID`,
-`CC_PROJECT_DIR`), never raw stdin. See [`components/ctx`](plugin/components/ctx) for a segment and
-[`components/stock-ticker`](plugin/components/stock-ticker) for a line widget with a fetch step.
-
-## The Claude-native angle
-
-A component is self-describing — its `component.json` declares what inputs it reads, what it
-requires (`bin` / `network` / `macos`), its capabilities, and its config schema. That's not just
-for the runtime; it's the contract Claude reads to **vet, install, and tune** a component on your
-behalf. The plugin's slash commands lean on this:
-
-- `/statusline:install <component>` — Claude reads the component's source and README, summarises
-  what it shows / which hosts it contacts / what it needs / its render cost, confirms with you,
-  then installs it into your user layer and wires it into your profile.
-- `/statusline:configure <component>` — tune its config knobs (written to the user layer, never the
-  component dir).
-- `/statusline:preview` / `/statusline:doctor` — dry-run a component or profile, or health-check
-  the whole install.
-
-The status line is built to be operated by the assistant standing right next to it.
+</details>
 
 ## Contributing
 
