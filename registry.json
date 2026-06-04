@@ -10,6 +10,13 @@
       "author": "zyx1121",
       "official": true,
       "description": "The built-in components that ship with the statusline plugin."
+    },
+    {
+      "repo": "zyx1121/statusline-e2e-test",
+      "ref": "main",
+      "path": "components",
+      "author": "zyx1121",
+      "description": "E2E test source — temporary, removed after the federated install smoke test."
     }
   ]
 }
