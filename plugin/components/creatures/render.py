@@ -7,10 +7,11 @@ overlapping), live for a while, then vanish and let others appear. Several can
 share the strip at once. Species are drawn from the full Seer dex (种类 1-500),
 loaded lazily — only the few creatures currently on screen are read per tick.
 
-Rendered with octant blocks (2×4 sub-pixels per cell, two colours per cell). At a
-~1:2 cell the octant sub-pixel is square, so proportions are faithful. Ghostty
-custom-draws the Legacy-Computing octant block, so font coverage is irrelevant.
-Pure stdlib.
+Rendered with quadrant blocks: each cell's 2×4 sub-pixels are folded to a 2×2
+block from the U+2580–259F Block Elements range — the glyphs every monospace font
+ships. Two colours per cell (fg/bg). Works in any terminal, including ones that
+don't custom-draw the Legacy-Computing octant block (e.g. Terminal.app), at the
+cost of half the vertical detail. Pure stdlib.
 
 Usage: render.py <cols> [--session ID] [--ground STYLE] [--resident DEX[,DEX...]] [--state PATH] [--data DIR]
 Paths default to the loader-provided STATUSLINE_STATE (state) and STATUSLINE_CONFIG/assets (sprites).
@@ -91,17 +92,13 @@ def load_sprite_file(path_noext: Path):
 
 
 class World:
-    """Holds the dex index + octant table; loads individual sprites on demand."""
+    """Holds the dex index; loads individual sprites on demand."""
 
     def __init__(self, data_dir: Path):
         self.dir = data_dir
         idx = load_json(data_dir / "index.json", {"sx": 2, "sy": 4, "creatures": []})
         self.sx, self.sy = idx.get("sx", 2), idx.get("sy", 4)
         self.species = [c["k"] for c in idx.get("creatures", [])]
-        try:
-            self.octant = (data_dir / "octant.txt").read_text(encoding="utf-8")
-        except OSError:
-            self.octant = ""
         self._cache: dict[int, dict | None] = {}
 
     def sprite(self, k: int):
@@ -283,8 +280,35 @@ def fold_cell(sub):
     return pat, _avg(ga), (_avg(gb) if gb else None)
 
 
+# 2×2 quadrant block elements (U+2580–259F), indexed by a 4-bit pattern:
+# bit0=upper-left, bit1=upper-right, bit2=lower-left, bit3=lower-right. This is
+# the Block Elements range every monospace font ships, so it renders anywhere —
+# unlike the 2×4 octant glyphs (Legacy Computing, plane 1) that need the terminal
+# to custom-draw them.
+QUADRANT = " ▘▝▀▖▌▞▛▗▚▐▜▄▙▟█"
+
+
+def _merge2(a, b):
+    """Average two vertically-stacked sub-pixels into one quadrant sub-pixel."""
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return ((a[0] + b[0]) // 2, (a[1] + b[1]) // 2, (a[2] + b[2]) // 2)
+
+
+def fold_quadrant(sub):
+    """Fold a 2×4 (sx×sy, row-major) sub-pixel cell to a 2×2 quadrant — pair
+    rows (0,1) and (2,3), then reuse fold_cell's two-colour split (≤4 points)."""
+    quad = [_merge2(sub[0], sub[2]),   # upper-left  ← (r0,c0)+(r1,c0)
+            _merge2(sub[1], sub[3]),   # upper-right ← (r0,c1)+(r1,c1)
+            _merge2(sub[4], sub[6]),   # lower-left  ← (r2,c0)+(r3,c0)
+            _merge2(sub[5], sub[7])]   # lower-right ← (r2,c1)+(r3,c1)
+    return fold_cell(quad)
+
+
 def render(state, world, cols, ground=None):
-    if not world.species or not world.octant:
+    if not world.species:
         return ""
     sx, sy = world.sx, world.sy
     canvas = build_canvas(state, world, cols, ground)
@@ -296,8 +320,8 @@ def render(state, world, cols, ground=None):
         for cc in range(cols):
             x = cc * sx
             sub = [brows[r][x + c] for r in range(sy) for c in range(sx)]
-            pat, fg, bg = fold_cell(sub)
-            glyph = world.octant[pat] if pat < len(world.octant) else "█"
+            pat, fg, bg = fold_quadrant(sub)
+            glyph = QUADRANT[pat]
             if pat == 0:
                 line.append("\033[0m ")
             elif bg is None:

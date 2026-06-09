@@ -2,7 +2,7 @@
   "$schema": "statusline/component@1",
   "id": "creatures",
   "name": "Creatures",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": {
     "github": "zyx1121"
   },
