@@ -4,11 +4,11 @@ A line widget — a tiny world of Seer creatures pacing back and forth across th
 
 ## What it shows
 
-A multi-row (10 rows by default) stage drawn with octant blocks (2×4 sub-pixels per cell, two colours per cell). Each status-line refresh is one tick: creatures pace left and right, turn around when they hit an edge or each other (never overlapping), live for a while, then vanish and let others appear. A few share the strip at once. Species are drawn from the full dex (species 1–500), loaded lazily — each tick reads only the few creatures currently on screen. There is also a permanent resident (132 = Ditto by default, never expires) and, when `ground="grass"`, a solid green grass band the creatures stand on. The output may span any number of rows (unlike a segment, which returns a single string).
+A multi-row (10 rows by default) stage drawn with quadrant blocks — each cell's 2×4 sub-pixel grid is folded to a 2×2 block from the U+2580–259F Block Elements range (two colours per cell), so it renders in any terminal, including ones that don't custom-draw the Legacy-Computing octant glyphs (e.g. Terminal.app). Each status-line refresh is one tick: creatures pace left and right, turn around when they hit an edge or each other (never overlapping), live for a while, then vanish and let others appear. A few share the strip at once. Species are drawn from the full dex (species 1–500), loaded lazily — each tick reads only the few creatures currently on screen. There is also a permanent resident (132 = Ditto by default, never expires) and, when `ground="grass"`, a solid green grass band the creatures stand on. The output may span any number of rows (unlike a segment, which returns a single string).
 
 ## Data sources
 
-- `STATUSLINE_CONFIG/assets/` — the sprite store: `index.json` (dex index + sx/sy), `octant.txt` (the octant glyph table), and `<dex>.json` or `<dex>.json.gz` (per-species sprites, loaded lazily). The loader need not pass `--data`; it defaults here.
+- `STATUSLINE_CONFIG/assets/` — the sprite store: `index.json` (dex index + sx/sy) and `<dex>.json` or `<dex>.json.gz` (per-species sprites, loaded lazily). The loader need not pass `--data`; it defaults here. (`octant.txt` is kept only for the web preview's pixel-decoder; the terminal renderer no longer reads it.)
 - `--session <id>`: a per-session world, so each Claude Code session has its own creatures (the state file is named after the session id).
 - No stdin `CC_*` fields, no network — all animation state comes from the local state file.
 
@@ -34,7 +34,7 @@ The loader turns each config scalar into a `--<key> <value>` flag.
 
 ## Example output
 
-A 10-row octant-block animation, each cell carrying a 24-bit foreground/background ANSI colour. A Ditto stands on the grass, other species occasionally wander by, and the scene shifts tick by tick. It's a visual animation that plain text can't faithfully represent — just run it:
+A 10-row quadrant-block animation, each cell carrying a 24-bit foreground/background ANSI colour. A Ditto stands on the grass, other species occasionally wander by, and the scene shifts tick by tick. It's a visual animation that plain text can't faithfully represent — just run it:
 
 ```sh
 STATUSLINE_STATE=/tmp/creatures STATUSLINE_CONFIG=$PWD \

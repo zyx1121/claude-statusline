@@ -4,11 +4,11 @@
 
 ## What it shows
 
-多行（默认 10 行）octant block（每格 2×4 sub-pixel、每格两色）渲染的动画舞台。每次 status line refresh = 一个 tick：creatures 左右踱步，碰到边缘或彼此会转身（不重叠），活一阵子后消失、换别的出现。同时最多几只共用画面。物种抽自完整 dex（种类 1–500），lazy load — 每 tick 只读当下在画面上的那几只。另有常驻 resident（默认 132 = 百变怪，永不消失），以及 `ground="grass"` 时让 creatures 站在上面的一条纯绿色草地带。输出允许任意多行（不像 segment 只返回单一字符串）。
+多行（默认 10 行）quadrant block 渲染的动画舞台——每格的 2×4 sub-pixel 折成 2×2、取自 U+2580–259F Block Elements（每格两色），所以在任何终端都画得出来，包括不会 custom-draw Legacy-Computing octant glyph 的（例如 Terminal.app）。每次 status line refresh = 一个 tick：creatures 左右踱步，碰到边缘或彼此会转身（不重叠），活一阵子后消失、换别的出现。同时最多几只共用画面。物种抽自完整 dex（种类 1–500），lazy load — 每 tick 只读当下在画面上的那几只。另有常驻 resident（默认 132 = 百变怪，永不消失），以及 `ground="grass"` 时让 creatures 站在上面的一条纯绿色草地带。输出允许任意多行（不像 segment 只返回单一字符串）。
 
 ## Data sources
 
-- `STATUSLINE_CONFIG/assets/` — sprite store：`index.json`（dex 索引 + sx/sy）、`octant.txt`（octant glyph 表）、`<dex>.json` 或 `<dex>.json.gz`（各物种 sprite，lazy load）。loader 不必传 `--data`，默认就指到这里。
+- `STATUSLINE_CONFIG/assets/` — sprite store：`index.json`（dex 索引 + sx/sy）、`<dex>.json` 或 `<dex>.json.gz`（各物种 sprite，lazy load）。loader 不必传 `--data`，默认就指到这里。（`octant.txt` 只留给 web preview 的 pixel-decoder，terminal renderer 已不再读它。）
 - `--session <id>`：per-session 世界，每个 Claude Code session 各有自己的 creatures（state 文件以 session id 命名）。
 - 无任何 stdin `CC_*` 字段、无网络 — 动画状态全来自本机 state 文件。
 
@@ -34,7 +34,7 @@ loader 把 config scalar 转成 `--<key> <value>` flag 传入。
 
 ## Example output
 
-10 行 octant block 动画，每格带 24-bit 前景/背景色 ANSI。一只百变怪站在草地上、旁边偶有别的物种路过，画面逐 tick 移动。属视觉动画，无法用纯文字忠实呈现——直接运行：
+10 行 quadrant block 动画，每格带 24-bit 前景/背景色 ANSI。一只百变怪站在草地上、旁边偶有别的物种路过，画面逐 tick 移动。属视觉动画，无法用纯文字忠实呈现——直接运行：
 
 ```sh
 STATUSLINE_STATE=/tmp/creatures STATUSLINE_CONFIG=$PWD \
