@@ -68,14 +68,20 @@ vwidth() {
 }
 
 # Helper: compose one segment row from a left group + a right group, padded apart to
-# fill $COLS. An empty right group prints the left group as-is (legacy left-align).
+# fill the writable width ($COLS minus a reserved margin — see below). An empty right
+# group prints the left group as-is (legacy left-align).
 emit_row() {   # $1=left (joined), $2=right (joined)
-  local l r lw rw gap
+  local l r lw rw gap margin eff
   printf -v l '%b' "$1"
   printf -v r '%b' "$2"
   if [ -z "$r" ]; then printf '%s' "$l"; return; fi
   lw=$(vwidth "$1"); rw=$(vwidth "$2")
-  if [ -z "$l" ]; then gap=$(( COLS - rw )); else gap=$(( COLS - lw - rw )); fi
+  # Claude Code reserves built-in horizontal spacing, so the writable width is a few
+  # cols short of $COLUMNS. Right-aligning to the full width overflows and CC truncates
+  # the tail with an ellipsis — pull the right group in by a margin (override via env).
+  margin=${STATUSLINE_RIGHT_MARGIN:-4}
+  eff=$(( COLS - margin ))
+  if [ -z "$l" ]; then gap=$(( eff - rw )); else gap=$(( eff - lw - rw )); fi
   [ "$gap" -lt 1 ] && gap=1
   printf '%s%*s%s' "$l" "$gap" "" "$r"
 }
