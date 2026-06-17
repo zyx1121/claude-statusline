@@ -4,11 +4,12 @@
 
 ## What it shows
 
-多列（預設 10 列）的動畫舞台，預設用 octant block（Unicode 16 Legacy Computing，U+1CD00…）以完整 2×4 sub-pixel 解析度算圖——一格一個 glyph、兩色，八個 sub-pixel 每個佔一格的 1/8。這需要會 custom-draw 這些 glyph 的終端（Ghostty、kitty、WezTerm、較新的 iTerm2）；設 `blocks="quadrant"` 則把每格折成 2×2 的 U+2580–259F Block Element，可在任何 monospace font 顯示（例如 Terminal.app），代價是垂直精度減半。每次 status line refresh = 一個 tick：creatures 左右踱步，碰到邊緣或彼此會轉身（不重疊），活一陣子後消失、換別的出現。同時最多幾隻共用畫面。物種抽自完整 dex（種類 1–500），lazy load — 每 tick 只讀當下在畫面上的那幾隻。另有常駐 resident（預設 132 = 百變怪，永不消失），以及 `ground="grass"` 時讓 creatures 站在上面的一條純綠色草地帶。輸出允許任意多列（unlike segment 只回單一字串）。
+多列（預設 10 列）的動畫舞台，預設用 octant block（Unicode 16 Legacy Computing，U+1CD00…）以完整 2×4 sub-pixel 解析度算圖——一格一個 glyph、兩色，八個 sub-pixel 每個佔一格的 1/8。這需要會 custom-draw 這些 glyph 的終端（Ghostty、kitty、WezTerm、較新的 iTerm2）；設 `blocks="quadrant"` 則把每格折成 2×2 的 U+2580–259F Block Element，可在任何 monospace font 顯示（例如 Terminal.app），代價是垂直精度減半。每次 status line refresh = 一個 tick：creatures 左右踱步，碰到邊緣或彼此會轉身（不重疊），活一陣子後消失、換別的出現。同時最多幾隻共用畫面。物種抽自 dex（Gen 1–5 + Gen 7–8，約 780 種），lazy load — 每 tick 只讀當下在畫面上的那幾隻。另有常駐 resident（預設 132 = 百變怪，永不消失），以及 `ground="grass"` 時讓 creatures 站在上面的一條純綠色草地帶。輸出允許任意多列（unlike segment 只回單一字串）。
 
 ## Data sources
 
 - `STATUSLINE_CONFIG/assets/` — sprite store：`index.json`（dex 索引 + sx/sy）、`<dex>.json` 或 `<dex>.json.gz`（各物種 sprite，lazy load）。loader 不必傳 `--data`，預設就指到這裡。（`octant.txt` — 256 個 glyph 的 octant 對照表——在 `octant` 模式由 terminal renderer 讀取，並與 web preview 的 pixel-decoder 共用同一份。）
+- sprite 由 [PokeAPI/sprites](https://github.com/PokeAPI/sprites) 的 Black/White animated GIF（Gen 5 / Nintendo DS 原生像素 sprite；CC0，圖像版權 © The Pokémon Company）經 `plugin/spec/build-creature-sprites.py` 產生——先裁到聯集 bounding box，再以 **nearest-neighbour** 縮放，讓每隻保留原生小色板（6–24 色、硬邊），而非被抗鋸齒糊成上千色。Gen 6（650–721）與 Gen 9 在任何主系列遊戲都沒有 2D sprite（X/Y 起改 3D 模型），故天生缺席、非遺漏。
 - `--session <id>`：per-session 世界，每個 Claude Code session 各有自己的 creatures（state 檔以 session id 命名）。
 - 無任何 stdin `CC_*` 欄位、無網路 — 動畫狀態全來自本機 state 檔。
 
