@@ -96,11 +96,12 @@ def load_sprite_file(path_noext: Path):
 class World:
     """Holds the dex index; loads individual sprites on demand."""
 
-    def __init__(self, data_dir: Path):
+    def __init__(self, data_dir: Path, exclude: set[int] | None = None):
         self.dir = data_dir
         idx = load_json(data_dir / "index.json", {"sx": 2, "sy": 4, "creatures": []})
         self.sx, self.sy = idx.get("sx", 2), idx.get("sy", 4)
-        self.species = [c["k"] for c in idx.get("creatures", [])]
+        ex = exclude or set()
+        self.species = [c["k"] for c in idx.get("creatures", []) if c["k"] not in ex]
         self._cache: dict[int, dict | None] = {}
 
     def sprite(self, k: int):
@@ -366,7 +367,7 @@ def render(state, world, cols, ground=None, blocks="octant"):
 
 def main() -> int:
     args = sys.argv[1:]
-    data_dir, state_path, cols, session, ground, residents, blocks = DEFAULT_DATA, None, 80, None, None, [], "octant"
+    data_dir, state_path, cols, session, ground, residents, blocks, exclude = DEFAULT_DATA, None, 80, None, None, [], "octant", set()
     i = 0
     while i < len(args):
         a = args[i]
@@ -387,6 +388,12 @@ def main() -> int:
             # "octant" (default, full 2×4 detail; needs a custom-draw terminal) or
             # "quadrant" (2×2 fold; renders in any monospace font).
             blocks = args[i + 1] if i + 1 < len(args) else "octant"; i += 2
+        elif a == "--exclude":
+            # comma-separated dex numbers to drop from the random spawn pool (e.g. "79").
+            # Residents are explicit opt-in and unaffected; this only filters random visitors.
+            if i + 1 < len(args):
+                exclude = {int(p) for p in args[i + 1].split(",") if p.strip().isdigit()}
+            i += 2
         else:
             try:
                 cols = int(a)
@@ -396,7 +403,7 @@ def main() -> int:
     if state_path is None:
         state_path = state_path_for(session)
 
-    world = World(data_dir)
+    world = World(data_dir, exclude)
     state = load_json(state_path, {"tick": 0, "creatures": []})
     rng = random.Random()
     if rng.random() < 0.01:                       # occasional cleanup of idle sessions
