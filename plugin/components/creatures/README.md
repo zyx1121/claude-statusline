@@ -21,6 +21,7 @@ The loader turns each config scalar into a `--<key> <value>` flag.
 | `ground` | string | `grass` | Ground strip style under the creatures. `grass` paints a solid green grass band for the creatures to stand on; any other value = no ground (creatures sit flush at the bottom). |
 | `resident` | number | `132` | Dex number of the permanent resident creature, which never expires and keeps pacing. Default 132 (Ditto). |
 | `blocks` | string | `octant` | Sub-pixel block style. `octant` (default) draws each cell's full 2×4 grid with Unicode 16 octant glyphs — needs a terminal that custom-draws them (Ghostty, kitty, WezTerm, recent iTerm2). `quadrant` folds to 2×2 U+2580–259F blocks that render in any monospace font (e.g. Terminal.app), at half the vertical detail. |
+| `exclude` | string | _(empty)_ | Comma-separated dex numbers to drop from the random spawn pool, so they never wander in (e.g. `79` to banish Slowpoke). Residents are explicit opt-in and unaffected. |
 
 ## Requires
 

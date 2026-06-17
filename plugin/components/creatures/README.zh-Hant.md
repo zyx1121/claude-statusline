@@ -21,6 +21,7 @@ loader 把 config scalar 轉成 `--<key> <value>` flag 傳入。
 | `ground` | string | `grass` | creatures 底下的草地帶樣式。`grass` 畫一條純綠色草地讓 creatures 站在上面；其他值 = 不畫地面（creatures 貼底）。|
 | `resident` | number | `132` | 常駐物種的 dex 編號，永不過期、一直在踱步。預設 132（百變怪）。|
 | `blocks` | string | `octant` | sub-pixel block 樣式。`octant`（預設）用 Unicode 16 octant glyph 畫出每格完整 2×4——需要會 custom-draw 的終端（Ghostty、kitty、WezTerm、較新的 iTerm2）。`quadrant` 折成 2×2 U+2580–259F block，可在任何 monospace font 顯示（例如 Terminal.app），垂直精度減半。|
+| `exclude` | string | _(空)_ | 逗號分隔的 dex 編號，從隨機 spawn 池移除、永不亂入（例如 `79` 把呆呆獸趕走）。resident 是顯式指定、不受此影響。|
 
 ## Requires
 
