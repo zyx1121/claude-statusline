@@ -7,13 +7,15 @@ overlapping), live for a while, then vanish and let others appear. Several can
 share the strip at once. Species are drawn from the full Seer dex (种类 1-500),
 loaded lazily — only the few creatures currently on screen are read per tick.
 
-Rendered with quadrant blocks: each cell's 2×4 sub-pixels are folded to a 2×2
-block from the U+2580–259F Block Elements range — the glyphs every monospace font
-ships. Two colours per cell (fg/bg). Works in any terminal, including ones that
-don't custom-draw the Legacy-Computing octant block (e.g. Terminal.app), at the
-cost of half the vertical detail. Pure stdlib.
+Rendered at full 2×4 sub-pixel resolution with octant blocks (Unicode 16 Legacy
+Computing, U+1CD00…) by default — one glyph per cell carrying two colours (fg/bg),
+its eight sub-pixels each an eighth of the cell. This needs a terminal that
+custom-draws those glyphs (Ghostty, kitty, WezTerm, recent iTerm2/foot). Pass
+--blocks quadrant to instead fold each cell to a 2×2 U+2580–259F Block Element —
+half the vertical detail, but renders in any monospace font (e.g. Terminal.app).
+Pure stdlib.
 
-Usage: render.py <cols> [--session ID] [--ground STYLE] [--resident DEX[,DEX...]] [--state PATH] [--data DIR]
+Usage: render.py <cols> [--session ID] [--ground STYLE] [--resident DEX[,DEX...]] [--blocks octant|quadrant] [--state PATH] [--data DIR]
 Paths default to the loader-provided STATUSLINE_STATE (state) and STATUSLINE_CONFIG/assets (sprites).
 """
 from __future__ import annotations
@@ -307,12 +309,37 @@ def fold_quadrant(sub):
     return fold_cell(quad)
 
 
-def render(state, world, cols, ground=None):
+# 2×4 octant blocks: 256 glyphs indexed by the 8-bit sub-pixel pattern (bit i ↔
+# row i>>1, col i&1 — exactly the order fold_cell emits). Most live in Unicode 16's
+# Legacy Computing Supplement (U+1CD00…, plane 1), so the terminal must custom-draw
+# them; the table is shared verbatim with the web pixel-decoder (assets/octant.txt).
+# Loaded lazily and cached so the quadrant path pays no IO.
+_OCTANT = []
+
+
+def load_octant(data_dir: Path):
+    """Return the 256-char octant glyph table, or None if missing/malformed
+    (caller then falls back to the quadrant blocks)."""
+    if _OCTANT:
+        return _OCTANT[0]
+    try:
+        line = (data_dir / "octant.txt").read_text(encoding="utf-8").splitlines()[0]
+    except (OSError, IndexError):
+        return None
+    if len(line) != 256:
+        return None
+    _OCTANT.append(line)
+    return line
+
+
+def render(state, world, cols, ground=None, blocks="octant"):
     if not world.species:
         return ""
     sx, sy = world.sx, world.sy
     canvas = build_canvas(state, world, cols, ground)
     R = len(canvas) // sy
+    # octant needs both the 256-glyph table and a 2×4 cell; else fall back to quadrant.
+    octant = load_octant(world.dir) if blocks == "octant" and (sx, sy) == (2, 4) else None
     out = []
     for cr in range(R):
         brows = [canvas[cr * sy + r] for r in range(sy)]
@@ -320,8 +347,12 @@ def render(state, world, cols, ground=None):
         for cc in range(cols):
             x = cc * sx
             sub = [brows[r][x + c] for r in range(sy) for c in range(sx)]
-            pat, fg, bg = fold_quadrant(sub)
-            glyph = QUADRANT[pat]
+            if octant is not None:
+                pat, fg, bg = fold_cell(sub)
+                glyph = octant[pat]
+            else:
+                pat, fg, bg = fold_quadrant(sub)
+                glyph = QUADRANT[pat]
             if pat == 0:
                 line.append("\033[0m ")
             elif bg is None:
@@ -335,7 +366,7 @@ def render(state, world, cols, ground=None):
 
 def main() -> int:
     args = sys.argv[1:]
-    data_dir, state_path, cols, session, ground, residents = DEFAULT_DATA, None, 80, None, None, []
+    data_dir, state_path, cols, session, ground, residents, blocks = DEFAULT_DATA, None, 80, None, None, [], "octant"
     i = 0
     while i < len(args):
         a = args[i]
@@ -352,6 +383,10 @@ def main() -> int:
             if i + 1 < len(args):
                 residents = [int(p) for p in args[i + 1].split(",") if p.strip().isdigit()]
             i += 2
+        elif a == "--blocks":
+            # "octant" (default, full 2×4 detail; needs a custom-draw terminal) or
+            # "quadrant" (2×2 fold; renders in any monospace font).
+            blocks = args[i + 1] if i + 1 < len(args) else "octant"; i += 2
         else:
             try:
                 cols = int(a)
@@ -373,7 +408,7 @@ def main() -> int:
     except OSError:
         pass
 
-    sys.stdout.write(render(state, world, max(1, cols), ground))
+    sys.stdout.write(render(state, world, max(1, cols), ground, blocks))
     return 0
 
 

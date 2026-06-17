@@ -4,11 +4,11 @@ A line widget — a tiny world of Seer creatures pacing back and forth across th
 
 ## What it shows
 
-A multi-row (10 rows by default) stage drawn with quadrant blocks — each cell's 2×4 sub-pixel grid is folded to a 2×2 block from the U+2580–259F Block Elements range (two colours per cell), so it renders in any terminal, including ones that don't custom-draw the Legacy-Computing octant glyphs (e.g. Terminal.app). Each status-line refresh is one tick: creatures pace left and right, turn around when they hit an edge or each other (never overlapping), live for a while, then vanish and let others appear. A few share the strip at once. Species are drawn from the full dex (species 1–500), loaded lazily — each tick reads only the few creatures currently on screen. There is also a permanent resident (132 = Ditto by default, never expires) and, when `ground="grass"`, a solid green grass band the creatures stand on. The output may span any number of rows (unlike a segment, which returns a single string).
+A multi-row (10 rows by default) stage drawn at full 2×4 sub-pixel resolution with octant blocks (Unicode 16 Legacy Computing, U+1CD00…) by default — one glyph per cell, two colours, each of its eight sub-pixels an eighth of the cell. This needs a terminal that custom-draws those glyphs (Ghostty, kitty, WezTerm, recent iTerm2); set `blocks="quadrant"` to instead fold each cell to a 2×2 U+2580–259F Block Element, which renders in any monospace font (e.g. Terminal.app) at half the vertical detail. Each status-line refresh is one tick: creatures pace left and right, turn around when they hit an edge or each other (never overlapping), live for a while, then vanish and let others appear. A few share the strip at once. Species are drawn from the full dex (species 1–500), loaded lazily — each tick reads only the few creatures currently on screen. There is also a permanent resident (132 = Ditto by default, never expires) and, when `ground="grass"`, a solid green grass band the creatures stand on. The output may span any number of rows (unlike a segment, which returns a single string).
 
 ## Data sources
 
-- `STATUSLINE_CONFIG/assets/` — the sprite store: `index.json` (dex index + sx/sy) and `<dex>.json` or `<dex>.json.gz` (per-species sprites, loaded lazily). The loader need not pass `--data`; it defaults here. (`octant.txt` is kept only for the web preview's pixel-decoder; the terminal renderer no longer reads it.)
+- `STATUSLINE_CONFIG/assets/` — the sprite store: `index.json` (dex index + sx/sy) and `<dex>.json` or `<dex>.json.gz` (per-species sprites, loaded lazily). The loader need not pass `--data`; it defaults here. (`octant.txt` — the 256-glyph octant table — is read by the terminal renderer in `octant` mode and shared verbatim with the web preview's pixel-decoder.)
 - `--session <id>`: a per-session world, so each Claude Code session has its own creatures (the state file is named after the session id).
 - No stdin `CC_*` fields, no network — all animation state comes from the local state file.
 
@@ -20,6 +20,7 @@ The loader turns each config scalar into a `--<key> <value>` flag.
 |-----|------|---------|-------------|
 | `ground` | string | `grass` | Ground strip style under the creatures. `grass` paints a solid green grass band for the creatures to stand on; any other value = no ground (creatures sit flush at the bottom). |
 | `resident` | number | `132` | Dex number of the permanent resident creature, which never expires and keeps pacing. Default 132 (Ditto). |
+| `blocks` | string | `octant` | Sub-pixel block style. `octant` (default) draws each cell's full 2×4 grid with Unicode 16 octant glyphs — needs a terminal that custom-draws them (Ghostty, kitty, WezTerm, recent iTerm2). `quadrant` folds to 2×2 U+2580–259F blocks that render in any monospace font (e.g. Terminal.app), at half the vertical detail. |
 
 ## Requires
 
@@ -34,7 +35,7 @@ The loader turns each config scalar into a `--<key> <value>` flag.
 
 ## Example output
 
-A 10-row quadrant-block animation, each cell carrying a 24-bit foreground/background ANSI colour. A Ditto stands on the grass, other species occasionally wander by, and the scene shifts tick by tick. It's a visual animation that plain text can't faithfully represent — just run it:
+A 10-row octant-block animation (or 2×2 quadrant blocks with `--blocks quadrant`), each cell carrying a 24-bit foreground/background ANSI colour. A Ditto stands on the grass, other species occasionally wander by, and the scene shifts tick by tick. It's a visual animation that plain text can't faithfully represent — just run it:
 
 ```sh
 STATUSLINE_STATE=/tmp/creatures STATUSLINE_CONFIG=$PWD \
